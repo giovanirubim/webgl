@@ -2,14 +2,11 @@
 	<head>
 		<title></title>
 		<meta charset="utf-8"/>
+		<script type="text/javascript" src="webgl.js"></script>
 		<script type="text/javascript" src="3dbasis.js"></script>
-		<script type="text/javascript" src="render.js"></script>
+		<script type="text/javascript" src="script.js"></script>
 	</head>
 	<body>
 		<canvas></canvas>
 	</body>
 </html>
-<script type="text/javascript">
-	var ctx = new RenderContext(512, 512, document.querySelector("canvas"));
-	ctx.renderPoint(new Vec(0, 0));
-</script>
