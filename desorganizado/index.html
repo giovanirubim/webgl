@@ -1,0 +1,129 @@
+<html>
+	<head>
+		<title></title>
+	</head>
+	<body>
+		<canvas></canvas>
+	</body>
+</html>
+<script type="text/javascript" src="model.js"></script>
+<script type="text/javascript" src="3dbasis.js"></script>
+<script type="text/javascript" src="geometries.js"></script>
+<script type="text/javascript">
+
+	var gl;
+
+	function init() {
+
+		let canvas = document.querySelector("canvas");
+		gl = canvas.getContext("webgl2");
+		sx = canvas.width = 512;
+		sy = canvas.height = 512;
+
+		gl.enable(gl.DEPTH_TEST);
+		gl.viewport(0, 0, sx, sy);
+		gl.clearColor(0.7, 0.7, 0.7, 1);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+		let vertexShader = new Shader("#version 300 es\n"
+			+ "precision highp float;\n"
+			+ "layout (location = 0) in vec3 aPos;\n"
+			+ "layout (location = 1) in vec3 aColor1;\n"
+			+ "layout (location = 2) in vec2 aUv;\n"
+			+ "out vec3 aColor2;\n"
+			+ "out vec2 uv;\n"
+			+ "uniform mat4 model;\n"
+			+ "void main() {\n"
+			+ "	aColor2 = aColor1;\n"
+			+ "	uv = aUv;\n"
+			+ "	gl_Position = model*vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+			+ "}", gl.VERTEX_SHADER);
+		vertexShader.bind(gl);
+
+		let frag = new Shader("#version 300 es\n"
+			+ "precision highp float;\n"
+			+ "uniform sampler2D tex;\n"
+			+ "in vec3 aColor2;\n"
+			+ "in vec2 uv;\n"
+			+ "out vec4 FragColor;\n"
+			+ "void main() {\n"
+			+ "	FragColor = texture(tex, uv);\n"
+			+ "}\n", gl.FRAGMENT_SHADER);
+		frag.bind(gl);
+
+		let mat = new Material();
+		mat.setVertex(vertexShader);
+		mat.setFrag(frag);
+		mat.bind(gl);
+
+		let loc = gl.getUniformLocation(mat.buffer, "model");
+		let locTex = gl.getUniformLocation(mat.buffer, "tex");
+		mat.use();
+
+		gl.uniform1i(locTex, 0);
+
+		let obj1 = new Mesh();
+		let tmp = squareGeometry(-0.2, -0.2, 0, 0.4, 0.4);
+		obj1.setMaterial(mat);
+		obj1.setAttrArray(tmp.attributes);
+		obj1.setElement(tmp.element);
+		obj1.bind(gl);
+
+		let texture = gl.createTexture();
+		// gl.activeTexture(2);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texImage2D(gl.TEXTURE_2D, 1, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img2);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, 1);
+
+		let m = new EulerRotation(0*TO_RAD, 0*TO_RAD, 0*TO_RAD).toMatrix();
+
+		function render() {
+
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+			let m2 = new EulerRotation(0*TO_RAD, 0*TO_RAD, 0*TO_RAD).toMatrix();
+			m = m2.mul(m);
+			
+			let t = new Date()*1;
+			let s = (Math.cos(t*0.001) + 1)*10 + 0.5;
+			let m3 = new Vector(s, s, 1).toScale();
+
+			m3 = m.mul(m3).m;
+			m3 = m3[0].concat(m3[1].concat(m3[2].concat(m3[3])));
+		
+			gl.uniformMatrix4fv(loc, false, new Float32Array(m3));
+
+			obj1.render();
+
+			let error = gl.getError();
+			if (error) {
+				clearInterval(code);
+			}
+
+		}
+
+		let code = setInterval(render, 10);
+
+	}
+
+	var img = document.createElement("img");
+	var img2 = document.createElement("img");
+	var count = 2;
+	function test() {
+		if (!(--count)) init();
+		this.style.display = "none";
+	}
+	img.addEventListener("load", test);
+	img2.addEventListener("load", test);
+	img.setAttribute("src", "temp.png");
+	img2.setAttribute("src", "temp2.png");
+	document.body.appendChild(img);
+	document.body.appendChild(img2);
+
+</script>
