@@ -55,6 +55,41 @@ class Material {
 	}
 }
 
+class Texture {
+	constructor() {
+		this.images = [];
+		this.buffer = null;
+		this.gl = null;
+	}
+	push(img) {
+		this.images.push(img);
+		return this;
+	}
+	bind(gl) {
+		let images = this.images;
+		let buffer = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, buffer);
+		let usingMipmap = false;
+		for (let i=0, n=images.length; i<n; ++i) {
+			if (i === 1) {
+				gl.generateMipmap(gl.TEXTURE_2D);
+				usingMipmap = true;
+			}
+			let img = images[i];
+			gl.texImage2D(gl.TEXTURE_2D, i, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+		}
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		let temp = usingMipmap ? gl.NEAREST_MIPMAP_NEAREST : gl.NEAREST;
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, temp);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, n - 1);
+		this.buffer = buffer;
+		this.gl = gl;
+		return this;
+	}
+}
+
 class Mesh {
 	constructor() {
 		this.material = null;
@@ -65,12 +100,15 @@ class Mesh {
 	}
 	setMaterial(material) {
 		this.material = material;
+		return this;
 	}
 	setAttrArray(attrArray) {
 		this.attrArray = attrArray;
+		return this;
 	}
 	setElement(element) {
 		this.element = element;
+		return this;
 	}
 	bind(gl) {
 		let vao = gl.createVertexArray();
@@ -78,7 +116,6 @@ class Mesh {
 		let ebo = gl.createBuffer();
 		let attrArray = this.attrArray;
 		gl.bindVertexArray(vao);
-
 		gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 		gl.bufferData(gl.ARRAY_BUFFER, attrArray, gl.STATIC_DRAW);
 		let bpe = attrArray.BYTES_PER_ELEMENT;
@@ -92,12 +129,14 @@ class Mesh {
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.element, gl.STATIC_DRAW);
 		this.gl = gl;
 		this.vao = vao;
+		return this;
 	}
 	render() {
 		let gl = this.gl;
 		this.material.use();
 		gl.bindVertexArray(this.vao);
 		gl.drawElements(gl.TRIANGLES, this.element.length, gl.UNSIGNED_BYTE, 0);
+		return this;
 	}
 }
 
