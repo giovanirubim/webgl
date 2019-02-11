@@ -56,30 +56,28 @@
 		mat.setFrag(frag);
 		mat.bind(gl);
 
-		let loc = gl.getUniformLocation(mat.buffer, "model");
+		let locMat = gl.getUniformLocation(mat.buffer, "model");
+
+		let texture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, 1);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texImage2D(gl.TEXTURE_2D, 1, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img2);
+
 		let locTex = gl.getUniformLocation(mat.buffer, "tex");
-		mat.use();
-
 		gl.uniform1i(locTex, 0);
-
+		
 		let obj1 = new Mesh();
 		let tmp = squareGeometry(-0.2, -0.2, 0, 0.4, 0.4);
 		obj1.setMaterial(mat);
 		obj1.setAttrArray(tmp.attributes);
 		obj1.setElement(tmp.element);
 		obj1.bind(gl);
-
-		let texture = gl.createTexture();
-		// gl.activeTexture(2);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-		gl.generateMipmap(gl.TEXTURE_2D);
-		gl.texImage2D(gl.TEXTURE_2D, 1, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img2);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, 1);
 
 		let m = new EulerRotation(0*TO_RAD, 0*TO_RAD, 0*TO_RAD).toMatrix();
 
@@ -97,7 +95,7 @@
 			m3 = m.mul(m3).m;
 			m3 = m3[0].concat(m3[1].concat(m3[2].concat(m3[3])));
 		
-			gl.uniformMatrix4fv(loc, false, new Float32Array(m3));
+			gl.uniformMatrix4fv(locMat, false, new Float32Array(m3));
 
 			obj1.render();
 

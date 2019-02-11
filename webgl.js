@@ -1,6 +1,6 @@
 class Shader {
-	constructor(code, type) {
-		this.code = code;
+	constructor(src, type) {
+		this.src = src;
 		if (type === "vertex") {
 			type = WebGL2RenderingContext.VERTEX_SHADER;
 		} else if (type === "frag" || type === "fragment") {
@@ -10,9 +10,9 @@ class Shader {
 		this.buffer = null;
 		this.gl = null;
 	}
-	bind(gl) {
+	glInit(gl) {
 		let buffer = gl.createShader(this.type);
-		gl.shaderSource(buffer, this.code);
+		gl.shaderSource(buffer, this.src);
 		gl.compileShader(buffer);
 		let log = gl.getShaderInfoLog(buffer);
 		if (log) throw new Error(log);
@@ -40,7 +40,7 @@ class Material {
 		this.fragShader = fragShader;
 		return this;
 	}
-	bind(gl) {
+	glInit(gl) {
 		let buffer = gl.createProgram();
 		gl.attachShader(buffer, this.vertexShader.buffer);
 		gl.attachShader(buffer, this.fragShader.buffer);
@@ -49,14 +49,11 @@ class Material {
 		this.gl = gl;
 		return this;
 	}
-	use() {
-		this.gl.useProgram(this.buffer);
-		return this;
-	}
 }
 
 class Texture {
-	constructor() {
+	constructor(id) {
+		this.id = id;
 		this.images = [];
 		this.buffer = null;
 		this.gl = null;
@@ -65,7 +62,7 @@ class Texture {
 		this.images.push(img);
 		return this;
 	}
-	bind(gl) {
+	glInit(gl) {
 		let images = this.images;
 		let buffer = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, buffer);
@@ -97,6 +94,8 @@ class Mesh {
 		this.element = null;
 		this.vao = null;
 		this.gl = null;
+		this.uniformMap = {};
+		this.vUniform = [];
 	}
 	setMaterial(material) {
 		this.material = material;
@@ -110,7 +109,53 @@ class Mesh {
 		this.element = element;
 		return this;
 	}
-	bind(gl) {
+	// Uniform call id:
+	// 01 001 = uniform1i
+	// 01 010 = uniform2iv
+	// 01 011 = uniform3iv
+	// 01 100 = uniform4iv
+	// 10 001 = uniform1f
+	// 10 010 = uniform2fv
+	// 10 011 = uniform3fv
+	// 10 100 = uniform4fv
+	// 11 010 = uniformMatrix2v
+	// 11 011 = uniformMatrix3v
+	// 11 100 = uniformMatrix4v
+	static get UNIFORM_INT()   {return 0b0100;}
+	static get UNIFORM_FLOAT() {return 0b1000;}
+	static get UNIFORM_MAT()   {return 0b1100;}
+	toUniformObject(value) {
+		let callId;
+		if (value instanceof Mat) {
+			callId = Mesh.UNIFORM_MAT | 4;
+			value = value.v;
+		} else if (value instanceof Vec) {
+			callId = Mesh.UNIFORM_VEC | 4;
+			value = value.v;
+		} else if (typeof value === "number") {
+			callId = Mesh.UNIFORM_FLOAT | 1;
+		}
+		return {
+			location: null,
+			callId: callId,
+			value: value
+		};
+	}
+	setUniform(name, value, callId) {
+		let map = this.uniformMap;
+		let array = this.vUniform;
+		let obj = map[name];
+		if (obj === undefined) {
+			if (callId === undefined) {
+				// obj = this.toUniformObject
+			}
+			array.push(obj);
+		}
+		obj.value = value;
+		obj.callId = callId;
+		return this;
+	}
+	glInit(gl) {
 		let vao = gl.createVertexArray();
 		let vbo = gl.createBuffer();
 		let ebo = gl.createBuffer();
@@ -133,7 +178,7 @@ class Mesh {
 	}
 	render() {
 		let gl = this.gl;
-		this.material.use();
+		gl.useProgram(this.material.buffer);
 		gl.bindVertexArray(this.vao);
 		gl.drawElements(gl.TRIANGLES, this.element.length, gl.UNSIGNED_BYTE, 0);
 		return this;
@@ -149,10 +194,13 @@ class WebglContext {
 		this.vShader = [];
 		this.vMaterial = [];
 		this.vMesh = [];
-		this.fps = 30;
 		this.tps = 30;
-		this.code = null;
-		this.tick = _ => {};
+		this.renderUpdated = false;
+		this.gTick = null;
+		this.cTick = null;
+		this.gCode = null;
+		this.cCode = null;
+		this.initialized = false;
 	}
 	setTick(tick) {
 		this.tick = tick;
@@ -166,7 +214,6 @@ class WebglContext {
 		} else if (arg instanceof Mesh) {
 			this.vMesh.push(arg);
 		}
-		arg.bind(this.gl);
 		return this;
 	}
 	setCanvas(canvas) {
@@ -177,12 +224,17 @@ class WebglContext {
 		return this;
 	}
 	init() {
+		if (this.initialized) return this;
 		let gl = this.gl;
 		let bg = this.bg;
 		gl.enable(gl.DEPTH_TEST);
 		gl.viewport(0, 0, this.sx, this.sy);
 		gl.clearColor(bg.r, bg.g, bg.b, bg.a);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		this.vShader.forEach(a => a.glInit(gl));
+		this.vMaterial.forEach(a => a.glInit(gl));
+		this.vMesh.forEach(a => a.glInit(gl));
+		this.initialized = true;
 		return this;
 	}
 	render() {
@@ -198,29 +250,34 @@ class WebglContext {
 		return this;
 	}
 	stop() {
-		let code = this.code;
-		if (code !== null) {
-			clearInterval(code);
-			this.code = null;
-		}
+		let code;
+		code = this.gCode;
+		if (code !== null) cancelAnimationFrame(code);
+		code = this.cCode;
+		if (code !== null) clearInterval(code);
 		return this;
 	}
 	start() {
-		stop();
-		let ini = new Date() - 0;
-		let nxtr = ini;
-		let nxtt = ini;
-		let dr = 1000/this.fps;
-		let dt = 1000/this.tps;
-		this.code = setInterval(_=>{
-			let now = new Date() - 0;
-			if (now >= nxtt) {
-				this.tick(this);
-				nxtt += dt;
-			}
-			if (now >= nxtr) {
+		let loop = _ => {
+			let tick = this.gTick;
+			if (tick) tick();
+			if (!this.renderUpdated) {
 				this.render();
-				nxtr = now + dr;
+				this.renderUpdated = true;
+			}
+			this.gCode = requestAnimationFrame(loop);
+		};
+		this.gCode = requestAnimationFrame(loop);
+		let ini = new Date() - 0;
+		let nextTick = ini;
+		this.cCode = setInterval(_=>{
+			let delta = 1000/this.tps;
+			let now = new Date() - 0;
+			if (now >= nextTick) {
+				let tick = this.cTick;
+				if (tick) tick(now - ini);
+				nextTick += delta;
+				this.renderUpdated = false;
 			}
 		}, 0);
 		return this;

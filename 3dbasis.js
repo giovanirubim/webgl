@@ -102,37 +102,37 @@ class EulerRotation {
 		let sy = Math.sin(this.y);
 		let cz = Math.cos(this.z);
 		let sz = Math.sin(this.z);
-		if (this.order === "XYZ") return new Matrix([
+		if (this.order === "XYZ") return new Mat([
 			 cz*cy, sz*cx + cz*sy*sx, sz*sx - cz*sy*cx, 0,
 			-sz*cy, cz*cx - sz*sy*sx, cz*sx + sz*sy*cx, 0,
 			    sy,           -cy*sx,            cy*cx, 0,
 			     0,                0,                0, 1
 		]);
-		if (this.order === "XZY") return new Matrix([
+		if (this.order === "XZY") return new Mat([
 			cy*cz, sy*sx + cy*sz*cx, cy*sz*sx - sy*cx, 0,
 			  -sz,            cz*cx,            cz*sx, 0,
 			sy*cz, sy*sz*cx - sx*cy, cy*cx + sy*sz*sx, 0,
 			    0,                0,                0, 1
 		]);
-		if (this.order === "YXZ") return new Matrix([
+		if (this.order === "YXZ") return new Mat([
 			sz*sx*sy + cz*cy, sz*cx, sz*sx*cy - sy*cz, 0,
 			cz*sx*sy - sz*cy, cz*cx, cz*sx*cy + sz*sy, 0,
 			           cx*sy,   -sx,            cx*cy, 0,
 			               0,     0,                0, 1
 		]);
-		if (this.order === "YZX") return new Matrix([
+		if (this.order === "YZX") return new Mat([
 			           cz*cy,     sz,           -sy*cz, 0,
 			sx*sy - sz*cy*cx,  cx*cz, sx*cy + cx*sz*sy, 0,
 			cx*sy + sx*sz*cy, -sx*cz, cx*cy - sx*sz*sy, 0,
 			               0,      0,                0, 1
 		]);
-		if (this.order === "ZXY") return new Matrix([
+		if (this.order === "ZXY") return new Mat([
 			cy*cz - sy*sx*sz, sy*sx*cz + cy*sz, -sy*cx, 0,
 			          -sz*cx,            cx*cz,     sx, 0,
 			cy*sx*sz + sy*cz, sy*sz - sx*cz*cy,  cy*cx, 0,
 			               0,                0,      0, 1
 		]);
-		if (this.order === "ZYX") return new Matrix([
+		if (this.order === "ZYX") return new Mat([
 			           cy*cz,            cy*sz,   -sy, 0,
 			sx*sy*cz - sz*cx, sx*sy*sz + cx*cz, sx*cy, 0,
 			cx*sy*cz + sx*sz, cx*sy*sz - sx*cz, cx*cy, 0,
@@ -209,7 +209,7 @@ class QuaternionRotation {
 		let i = y*w;
 		let j = y*z;
 		let k = x*w;
-		return new Matrix([
+		return new Mat([
 			(b - c - d + a)*e, 2*(f + g)*e,        2*(h - i)*e,        0,
 			2*(f - g)*e,       (-b + c - d + a)*e, 2*(j + k)*e,        0,
 			2*(h + i)*e,       2*(j - k)*e,        (-b - c + d + a)*e, 0,
