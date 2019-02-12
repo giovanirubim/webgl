@@ -17,21 +17,21 @@ window.addEventListener("load", function(){
 		"void main() {                            \n" +
 		"    aColor2 = aColor1;                   \n" +
 		"    uv = aUv;                            \n" +
-		"    vec4 coord = vec4(aPos, 1.0);        \n" +
-		// "    coord = model*coord;                 \n" +
-		"    gl_Position = coord;                 \n" +
+		"    gl_Position = model*vec4(aPos, 1.0); \n" +
 		"}                                        \n",
 		"vertex");
 
 	let fragShader = new Shader(
-		"#version 300 es\n" +
-		"precision highp float;\n" +
-		"in vec3 aColor2;\n" +
-		"in vec2 uv;\n" +
-		"out vec4 FragColor;\n" +
-		"void main() {\n" +
-		"    FragColor = vec4(uv, 1.0, 1.0);\n" +
-		"}\n", "frag");
+		"#version 300 es                          \n" +
+		"precision highp float;                   \n" +
+		"uniform sampler2D tex;                   \n" +
+		"in vec3 aColor2;                         \n" +
+		"in vec2 uv;                              \n" +
+		"out vec4 FragColor;                      \n" +
+		"void main() {                            \n" +
+		"    FragColor = texture(tex, uv);        \n" +
+		"}                                        \n",
+		"frag");
 
 	ctx.add(vertexShader);
 	ctx.add(fragShader);
@@ -64,23 +64,52 @@ window.addEventListener("load", function(){
 	square.setMaterial(mat);
 	square.setAttrArray(new Float32Array(vattr));
 	square.setElement(new Uint8Array([0, 1, 2, 1, 2, 3]));
-
 	ctx.add(square);
 
-	let r = new EulerRotation(0, 0, 0.005).toMatrix();
+	let texture = new Texture();
+	ctx.add(texture);
+
+	let r = new EulerRotation(0, 0, 0.01).toMatrix();
 	let m = new EulerRotation(0, 0, 0).toMatrix();
-	// mat.setUniform("model", m);
+	let u = m;
 
-	ctx.init();
+	square.setUniform("tex", texture.index);
 
-	ctx.start();
-
-	ctx.gTick = _ => {
-		// mat.setUniform("model", m);
-	};
-
+	ctx.gTick = _ => square.model = u.mul(m);
 	ctx.cTick = t => {
 		m = r.mul(m);
+		let s = 0.25 + (Math.sin(t*0.005) + 1)*1;
+		u = new Vec(s, s, 1).toScale();
 	};
+
+	let waiting = 2;
+	let img1, img2;
+	let countDown = _ => {
+		texture.push(img1);
+		texture.push(img2);
+		ctx.init();
+		ctx.start();
+	};
+
+	let newImg = (size) => {
+		let canvas = document.createElement("canvas");
+		let mid = size*0.5;
+		canvas.width = canvas.height = size;
+		let ctx = canvas.getContext("2d");
+		let f = n=>n?f(n-1)+Math.floor(Math.random()*16).toString(16):"#";
+		ctx.fillStyle = f(6);
+		ctx.fillRect(0, 0, size, size);
+		ctx.fillStyle = f(6);
+		ctx.beginPath();
+		ctx.arc(mid, mid, mid*0.75, 0, Math.PI*2);
+		ctx.fill();
+		let img = document.createElement("img");
+		img.src = canvas.toDataURL();
+		img.onload = _ => !(--waiting) ? countDown() : 0;
+		return img;
+	};
+
+	img1 = newImg(128);
+	img2 = newImg(64);
 
 });
