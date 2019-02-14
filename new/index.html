@@ -1,0 +1,44 @@
+<html>
+	<head>
+		<title></title>
+		<script type="text/javascript" src="webgl2.js"></script>
+	</head>
+	<body>
+		<canvas width="512" height="512"></canvas>
+	</body>
+</html>
+<script type="text/javascript">
+
+	let fShader = new Shader();
+	fShader.source = 
+		" #version 300 es                             \n" +
+		" precision highp float;                      \n" +
+		" out vec4 FragColor;                         \n" +
+		" void main() {                               \n" +
+		"     FragColor = vec4(0.0, 0.5, 1.0, 1.0);   \n" +
+		" }                                           \n";
+	fShader.type = "frag";
+
+	let vShader = new Shader();
+	vShader.source = "#version 300 es                 \n" +
+		" precision highp float;                      \n" +
+		" layout (location = 0) in vec3 inCoord;      \n" +
+		" layout (location = 1) in vec3 inColor;      \n" +
+		" layout (location = 2) in vec2 inUv;         \n" +
+		" out vec3 colorOut;                          \n" +
+		" out vec2 uv;                                \n" +
+		" uniform mat4 model;                         \n" +
+		" void main() {                               \n" +
+		"     colorOut = inColor;                     \n" +
+		"     uv = inUv;                              \n" +
+		"     gl_Position = model*vec4(inCoord, 1.0); \n" +
+		" }                                           \n";
+	vShader.type = "vertex";
+
+	let ctx = new WebGL2Context();
+
+	ctx.addMaterial(new Material(vShader, fShader));
+
+	ctx.bindCanvas(document.querySelector("canvas"));
+
+</script>
