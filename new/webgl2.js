@@ -188,8 +188,7 @@ class WebGL2Context {
 		let gl = this.gl;
 		gl.useProgram((this.materialMap[mesh.material.id]
 			|| this.wrapMaterial(mesh.material)).glRef);
-		let vao = this.wrapMesh(mesh).vao;
-		gl.bindVertexArray(vao);
+		gl.bindVertexArray(this.wrapMesh(mesh).vao);
 		gl.drawElements(GL_TRIANGLES, mesh.element.length, GL_UNSIGNED_BYTE, 0);
 	}
 }

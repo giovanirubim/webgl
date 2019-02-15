@@ -11,7 +11,8 @@
 <script type="text/javascript">
 
 	let vShader = new Shader();
-	vShader.source = "#version 300 es                  \n" +
+	vShader.source =
+		" #version 300 es                              \n" +
 		" precision highp float;                       \n" +
 		" layout (location = 0) in vec3 vertexCoord;   \n" +
 		" layout (location = 1) in vec3 vertexColor;   \n" +
@@ -35,26 +36,24 @@
 	mesh.material = new Material(vShader, fShader);
 	mesh.attrArray = new Float32Array([
 		
-		-0.5, -0.5, 0,
-		0, 0, 1,
-		-1, -1,
+		-0.9, -0.9,  0.0,
+		 0.0,  0.0,  1.0,
+		 0.0,  0.0,
 
-		 0.5, -0.5, 0,
-		1, 0, 1,
-		 1, -1,
+		 0.9, -0.9,  0.0,
+		 1.0,  0.0,  1.0,
+		 1.0,  0.0,
 
-		 0.5,  0.5, 0,
-		1, 1, 1,
-		 1,  1,
+		 0.9,  0.9,  0.0,
+		 1.0,  1.0,  1.0,
+		 1.0,  1.0,
 
-		-0.5,  0.5, 0,
-		0, 1, 1,
-		-1,  1
+		-0.9,  0.9,  0.0,
+		 0.0,  1.0,  1.0,
+		 0.0,  1.0
 
 	]);
-	mesh.element = new Uint32Array([
-		0, 1, 2, 0, 2, 3
-	]);
+	mesh.element = new Uint8Array([0, 1, 2, 0, 2, 3]);
 
 	let ctx = new WebGL2Context();
 
