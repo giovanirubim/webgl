@@ -1,29 +1,22 @@
-var SHADER_LAST_ID   = 0;
-var MATERIAL_LAST_ID = 0;
-var MESH_LAST_ID     = 0;
-var TEXTURE_LAST_ID  = 0;
+let SHADER_LAST_ID = 0;
+let MATERIAL_LAST_ID = 0;
+let MESH_LAST_ID = 0;
+let TEXTURE_LAST_ID = 0;
 
-class Mat4 {
-	constructor(arg) {
-		if (arg instanceof Array) {
-			if (arg[0] instanceof Array) {
-				let v = new Float32Array(16);
-				let k = 0;
-				for (let i=0; i<4; ++i) {
-					let row = arg[i];
-					for (let j=0; j<4; ++j) {
-						this.v[k++] = row[j];
-					}
-				}
-				this.v = v;
-				return;
-			}
-			this.v = new Float32Array(arg);
-			return;
-		}
-		this.v = new Float32Array(16);
-	}
-}
+var UNIFORM_INT =   0b01000;
+var UNIFORM_FLOAT = 0b10000;
+var UNIFORM_MAT =   0b11000;
+
+const GL_ARRAY_BUFFER = WebGL2RenderingContext.ARRAY_BUFFER;
+const GL_COLOR_BUFFER_BIT = WebGL2RenderingContext.COLOR_BUFFER_BIT;
+const GL_DEPTH_BUFFER_BIT = WebGL2RenderingContext.DEPTH_BUFFER_BIT;
+const GL_DEPTH_TEST = WebGL2RenderingContext.DEPTH_TEST;
+const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
+const GL_FLOAT = WebGL2RenderingContext.FLOAT;
+const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
+const GL_STATIC_DRAW = WebGL2RenderingContext.STATIC_DRAW;
+const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
+const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
 
 class Shader {
 	constructor() {
@@ -34,13 +27,19 @@ class Shader {
 	set type(value) {
 		value = value.toString().toLowerCase();
 		if (value === "vertex") {
-			this.enumType = WebGL2RenderingContext.VERTEX_SHADER;
+			this.enumType = GL_VERTEX_SHADER;
 		} else if (value === "frag" || value === "fragment") {
-			this.enumType = WebGL2RenderingContext.VERTEX_SHADER;
+			this.enumType = GL_FRAGMENT_SHADER;
+		}
+	}
+	get type() {
+		if (this.enumType === GL_VERTEX_SHADER) {
+			return "vertex";
+		} else if (this.enumType === GL_FRAGMENT_SHADER) {
+			return "fragment";
 		}
 	}
 }
-
 class Material {
 	constructor(vShader, fShader) {
 		this.id = ++ MATERIAL_LAST_ID;
@@ -48,24 +47,16 @@ class Material {
 		this.fShader = fShader;
 	}
 }
-
-class WebGL2Context {
+class Mesh {
 	constructor() {
-		this.shaderArray = [];
-		this.shaderMap   = {};
-		this.materialArray = [];
-		this.materialMap   = {};
-		this.gl = null;
+		this.id = ++ MESH_LAST_ID;
+		this.attrArray = null;
+		this.material = null;
+		this.element = null;
 	}
-	addShader(shader) {
-		let obj = {
-			target: shader,
-			glRef: null
-		};
-		this.shaderMap[shader.id] = obj;
-		this.shaderArray.push(obj);
-		return obj;
-	}
+}
+class WebGL2Context {
+	/* Private */
 	compileShader(obj) {
 		let gl = this.gl;
 		let shader = obj.target;
@@ -78,45 +69,147 @@ class WebGL2Context {
 		}
 		return obj.glRef = glRef;
 	}
-	addMaterial(material) {
-		let obj = {
-			target: material,
-			glRef: null
-		};
-		this.materialMap[material.id] = obj;
-		this.materialArray.push(obj);
-		return this;
+	wrapShader(shader) {
+		let obj = this.shaderMap[shader.id];
+		if (obj === undefined) {
+			obj = {
+				target: shader,
+				glRef: null
+			};
+			this.shaderMap[shader.id] = obj;
+			this.shaderArray.push(obj);
+		}
+		if (obj.glRef === null && this.gl !== null) {
+			this.compileShader(obj);
+		}
+		return obj;
 	}
-	prepareMaterial(obj) {
-		let material = obj.target;
-		let sMap = this.shaderMap;
-		let vShader = material.vShader;
-		let vObj = sMap[vShader.id] || this.addShader(vShader);
-		let vGlRef = vObj.glRef;
-		if (vGlRef === null) {
-			vGlRef = this.compileShader(vObj);
-		}
-		let fShader = material.fShader;
-		let fObj = sMap[fShader.id] || this.addShader(fShader);
-		let fGlRef = fObj.glRef;
-		if (fGlRef === null) {
-			fGlRef = this.compileShader(fObj);
-		}
+	bindMaterial(obj) {
 		let gl = this.gl;
+		let map = this.shaderMap;
+		let material = obj.target;
+		let vShader = material.vShader;
+		let vObj = map[vShader.id] || this.wrapShader(vShader);
+		let vGlRef = vObj.glRef || this.compileShader(vObj);
+		let fShader = material.fShader;
+		let fObj = map[fShader.id] || this.wrapShader(fShader);
+		let fGlRef = fObj.glRef || this.compileShader(fObj);
 		let glRef = gl.createProgram();
 		gl.attachShader(glRef, vGlRef);
 		gl.attachShader(glRef, fGlRef);
 		gl.linkProgram(glRef);
-		obj.glRef = glRef;
+		return obj.glRef = glRef;
+	}
+	wrapMaterial(material) {
+		let obj = this.materialMap[material.id];
+		if (obj === undefined) {
+			obj = {
+				target: material,
+				glRef: null
+			};
+			this.materialMap[material.id] = obj;
+			this.materialArray.push(obj);
+		}
+		if (obj.glRef === null && this.gl !== null) {
+			this.bindMaterial(obj);
+		}
+		return obj;
+	}
+	bindMesh(obj) {
+		let gl = this.gl;
+		let mesh = obj.target;
+		let vao = gl.createVertexArray();
+		let vbo = gl.createBuffer();
+		let ebo = gl.createBuffer();
+		let bpe = mesh.attrArray.BYTES_PER_ELEMENT;
+		gl.bindVertexArray(vao);
+		gl.bindBuffer(GL_ARRAY_BUFFER, vbo);
+		gl.bufferData(GL_ARRAY_BUFFER, mesh.attrArray, GL_STATIC_DRAW);
+		gl.vertexAttribPointer(0, 3, GL_FLOAT, false, bpe*8, 0);
+		gl.vertexAttribPointer(1, 3, GL_FLOAT, false, bpe*8, bpe*3);
+		gl.vertexAttribPointer(2, 2, GL_FLOAT, false, bpe*8, bpe*6);
+		gl.enableVertexAttribArray(0);
+		gl.enableVertexAttribArray(1);
+		gl.enableVertexAttribArray(2);
+		gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+		gl.bufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.element, GL_STATIC_DRAW);
+		return obj.vao = vao;
+	}
+	wrapMesh(mesh) {
+		let obj = this.meshMap[mesh.id];
+		if (obj === undefined) {
+			obj = {
+				target: mesh,
+				vao: null,
+			};
+			this.meshMap[mesh.id] = obj;
+			this.meshArray.push(obj);
+		}
+		if (obj.vao === null && this.gl !== null) {
+			this.bindMesh(obj);
+		}
+		return obj;
+	}
+	/* Public */
+	constructor() {
+		this.shaderMap = {};
+		this.shaderArray = [];
+		this.materialMap = {};
+		this.materialArray = [];
+		this.meshMap = {};
+		this.meshArray = [];
+		this.uniformMap = {};
+		this.uniformArray = {};
+		this.gl = null;
+		this.start_x = null;
+		this.start_y = null;
+		this.size_x = null;
+		this.size_y = null;
 	}
 	bindCanvas(canvas) {
-		this.gl = canvas.getContext("webgl2");
-		for (let a=this.materialArray, i=a.length; i;) {
-			let obj = a[--i];
-			if (obj.glRef === null) {
-				this.prepareMaterial(obj);
+		this.start_x = 0;
+		this.start_y = 0;
+		this.size_x = canvas.width;
+		this.size_y = canvas.height;
+		let gl = this.gl = canvas.getContext("webgl2");
+		gl.enable(GL_DEPTH_TEST);
+		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
+		gl.clearColor(0, 0, 0, 1);
+		gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
+		return this;
+	}
+	clear() {
+		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		return this;
+	}
+	updateUniform(uObj) {
+		let gl = this.gl;
+		let material = uObj.material;
+		switch (uObj.type) {
+
+		}
+	}
+	setUniform(name, material, value, type) {
+		if (type === undefined) {
+			if (value instanceof Mat) {
+				value = value.v;
+				type = UNIFORM_MAT | 4;
+			} else if (value instanceof Vec) {
+				value = value.v;
+				type = UNIFORM_FLOAT | 4;
+			} else if (Number.isSafeInteger(value)) {
+				type = UNIFORM_INT | 1;
+			} else {
+				type = UNIFORM_FLOAT | 1;
 			}
 		}
-		return this;
+		if (this.gl) {
+
+		}
+	}
+	renderMesh(mesh) {
+		let gl = this.gl;
+		gl.useProgram((this.materialMap[mesh.material.id]
+			|| this.wrapMaterial(mesh.material)).glRef);
 	}
 }

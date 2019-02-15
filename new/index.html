@@ -2,6 +2,7 @@
 	<head>
 		<title></title>
 		<script type="text/javascript" src="webgl2.js"></script>
+		<script type="text/javascript" src="3dbasis.js"></script>
 	</head>
 	<body>
 		<canvas width="512" height="512"></canvas>
@@ -35,10 +36,36 @@
 		" }                                           \n";
 	vShader.type = "vertex";
 
+	var mesh = new Mesh();
+	mesh.material = new Material(vShader, fShader);
+	mesh.attrArray = new Float32Array([
+		
+		-0.5, -0.5, 0,
+		0, 0, 1,
+		-1, -1,
+
+		 0.5, -0.5, 0,
+		1, 0, 1,
+		 1, -1,
+
+		 0.5,  0.5, 0,
+		1, 1, 1,
+		 1,  1,
+
+		-0.5,  0.5, 0,
+		0, 1, 1,
+		-1,  1
+
+	]);
+	mesh.element = new Uint32Array([
+		0, 1, 2, 0, 2, 3
+	]);
+
 	let ctx = new WebGL2Context();
 
-	ctx.addMaterial(new Material(vShader, fShader));
-
 	ctx.bindCanvas(document.querySelector("canvas"));
+	ctx.clear();
+	ctx.setUniform("fodase", 1);
+	ctx.renderMesh(mesh);
 
 </script>
