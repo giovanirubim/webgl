@@ -1,11 +1,11 @@
-let SHADER_LAST_ID = 0;
+let SHADER_LAST_ID   = 0;
 let MATERIAL_LAST_ID = 0;
-let MESH_LAST_ID = 0;
-let TEXTURE_LAST_ID = 0;
+let MESH_LAST_ID     = 0;
+let TEXTURE_LAST_ID  = 0;
 
-var UNIFORM_INT =   0b01000;
-var UNIFORM_FLOAT = 0b10000;
-var UNIFORM_MAT =   0b11000;
+var UNIFORM_INT   = (1 << 3);
+var UNIFORM_FLOAT = (2 << 3);
+var UNIFORM_MAT   = (3 << 3);
 
 const GL_ARRAY_BUFFER = WebGL2RenderingContext.ARRAY_BUFFER;
 const GL_COLOR_BUFFER_BIT = WebGL2RenderingContext.COLOR_BUFFER_BIT;
@@ -15,7 +15,9 @@ const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
 const GL_FLOAT = WebGL2RenderingContext.FLOAT;
 const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
 const GL_STATIC_DRAW = WebGL2RenderingContext.STATIC_DRAW;
+const GL_TRIANGLES = WebGL2RenderingContext.TRIANGLES;
 const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
+const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
 
 class Shader {
@@ -158,13 +160,13 @@ class WebGL2Context {
 		this.materialArray = [];
 		this.meshMap = {};
 		this.meshArray = [];
-		this.uniformMap = {};
-		this.uniformArray = {};
+		this.locationMap = {};
 		this.gl = null;
 		this.start_x = null;
 		this.start_y = null;
 		this.size_x = null;
 		this.size_y = null;
+		this.currentMaterial = null;
 	}
 	bindCanvas(canvas) {
 		this.start_x = 0;
@@ -182,34 +184,12 @@ class WebGL2Context {
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
-	updateUniform(uObj) {
-		let gl = this.gl;
-		let material = uObj.material;
-		switch (uObj.type) {
-
-		}
-	}
-	setUniform(name, material, value, type) {
-		if (type === undefined) {
-			if (value instanceof Mat) {
-				value = value.v;
-				type = UNIFORM_MAT | 4;
-			} else if (value instanceof Vec) {
-				value = value.v;
-				type = UNIFORM_FLOAT | 4;
-			} else if (Number.isSafeInteger(value)) {
-				type = UNIFORM_INT | 1;
-			} else {
-				type = UNIFORM_FLOAT | 1;
-			}
-		}
-		if (this.gl) {
-
-		}
-	}
 	renderMesh(mesh) {
 		let gl = this.gl;
 		gl.useProgram((this.materialMap[mesh.material.id]
 			|| this.wrapMaterial(mesh.material)).glRef);
+		let vao = this.wrapMesh(mesh).vao;
+		gl.bindVertexArray(vao);
+		gl.drawElements(GL_TRIANGLES, mesh.element.length, GL_UNSIGNED_BYTE, 0);
 	}
 }
