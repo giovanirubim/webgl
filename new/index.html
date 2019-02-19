@@ -17,9 +17,10 @@
 		layout (location = 0) in vec3 vertexCoord;
 		layout (location = 1) in vec3 vertexColor;
 		layout (location = 2) in vec2 vertexUV;
+		uniform float one;
 		void main() {
-			gl_Position = vec4(vertexCoord, 1.0);
-		}`;
+			gl_Position = vec4(vertexCoord, 1.0)*one;
+		}`.trim();
 	vShader.type = "vertex";
 
 	let fShader = new Shader();
@@ -29,29 +30,41 @@
 		out vec4 FragColor;
 		void main() {
 		    FragColor = vec4(0.0, 0.5, 1.0, 1.0);
-		}`;
+		}`.trim();
 	fShader.type = "frag";
 
 	var geometry = new Geometry();
 	geometry.attrArray = new Float32Array([
+		
 		-0.9, -0.9,  0.0,
 		 0.0,  0.0,  1.0,
 		 0.0,  0.0,
+		
 		 0.9, -0.9,  0.0,
 		 1.0,  0.0,  1.0,
 		 1.0,  0.0,
+		
 		 0.9,  0.9,  0.0,
 		 1.0,  1.0,  1.0,
 		 1.0,  1.0,
+
 		-0.9,  0.9,  0.0,
 		 0.0,  1.0,  1.0,
 		 0.0,  1.0
+
 	]);
 	geometry.element = new Uint8Array([0, 1, 2, 0, 2, 3]);
+
+	var program = new Program(vShader, fShader);
+	var material = new Material(program, {
+		"one": {value: 1, type: UNIFORM_INT | 1}
+	});
+	var mesh = new Mesh(geometry, material);
 
 	let ctx = new WebGL2Context();
 
 	ctx.bindCanvas(document.querySelector("canvas"));
+	ctx.renderMesh(mesh);
 	ctx.clear();
 
 </script>
