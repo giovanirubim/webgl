@@ -42,18 +42,21 @@ class Mat {
 		return res;
 	}
 	toString() {
-		let res = "[";
+		// let res = "[";
+		let res = "";
 		for (let i=0; i<4; ++i) {
 			let c = i << 2;
-			if (i) res += ",\n"
-			res += "[";
+			if (i) res += "\n"
+			// if (i) res += ",\n"
+			// res += "[";
 			for (let j=0; j<4; ++j) {
 				if (j) res += ", ";
 				res += this.v[c|j];
 			}
-			res += "]";
+			// res += "]";
 		}
-		return res + "]";
+		// return res + "]";
+		return res;
 	}
 	get m00() {return this.v[0];}
 	set m00(val) {this.v[0] = value;}

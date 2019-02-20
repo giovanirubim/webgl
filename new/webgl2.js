@@ -92,18 +92,15 @@ class Transformable {
 		this.transform = new EulerRotation(x, y, z).toMatrix().mul(this.transform);
 	}
 	localRotate(x, y, z) {
-		// let v = this.transform.v;
-		// let dx = v[ 3];
-		// let dy = v[ 7];
-		// let dz = v[11];
-		// v[ 3] = 0;
-		// v[ 7] = 0;
-		// v[11] = 0;
-		this.transform = new EulerRotation(x, y, z).toMatrix().mul(this.transform);
-		// v = this.transform.v;
-		// v[ 3] = dx;
-		// v[ 7] = dy;
-		// v[11] = dz;
+		let v = this.transform.v;
+		let dx = v[ 3];
+		let dy = v[ 7];
+		let dz = v[11];
+		this.rotate(x, y, z);
+		v = this.transform.v;
+		v[ 3] = dx;
+		v[ 7] = dy;
+		v[11] = dz;
 	}
 }
 class Geometry {
