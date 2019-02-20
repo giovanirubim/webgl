@@ -73,18 +73,8 @@ class Material {
 		this.uniforms = array;
 	}
 }
-class Geometry {
+class Transformable {
 	constructor() {
-		this.id = Symbol();
-		this.attrArray = null;
-		this.element = null;
-	}
-}
-class Mesh {
-	constructor(geometry, material) {
-		this.id = Symbol();
-		this.geometry = geometry;
-		this.material = material;
 		this.transform = new Mat([
 			1, 0, 0, 0,
 			0, 1, 0, 0,
@@ -92,14 +82,63 @@ class Mesh {
 			0, 0, 0, 1
 		]);
 	}
+	translate(x, y, z) {
+		let v = this.transform.v;
+		v[3] += x;
+		v[7] += y;
+		v[11] += z;
+	}
+	rotate(x, y, z) {
+		this.transform = new EulerRotation(x, y, z).toMatrix().mul(this.transform);
+	}
+	localRotate(x, y, z) {
+		let v = this.transform.v;
+		let dx = v[ 3];
+		let dy = v[ 7];
+		let dz = v[11];
+		v[ 3] = 0;
+		v[ 7] = 0;
+		v[11] = 0;
+		this.transform = new EulerRotation(x, y, z).toMatrix().mul(this.transform);
+		v = this.transform.v;
+		v[ 3] = dx;
+		v[ 7] = dy;
+		v[11] = dz;
+	}
 }
-class Camera {
+class Geometry {
 	constructor() {
-		this.transform = new Matrix([
-			1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1
+		this.id = Symbol();
+		this.attrArray = null;
+		this.element = null;
+	}
+}
+class Mesh extends Transformable {
+	constructor(geometry, material) {
+		super();
+		this.id = Symbol();
+		this.geometry = geometry;
+		this.material = material;
+	}
+}
+class Camera extends Transformable {
+	constructor(sx, sy, n, f) {
+		super();
+		let r = sx*0.5;
+		let l = -r;
+		let t = sy*0.5;
+		let b = -t;
+		let A = 2*n/(r - l);
+		let B = (r + l)/(r - l);
+		let C = 2*n/(t - b);
+		let D = (t + b)/(t - b);
+		let E = (n + f)/(n - f);
+		let F = 2*n*f/(n - f);
+		this.transform = new Mat([
+			A, 0,  B, 0,
+			0, C,  D, 0,
+			0, 0,  E, F,
+			0, 0, -1, 0
 		]);
 	}
 	translate(vec) {
@@ -217,11 +256,12 @@ class WebGL2Context {
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
-	renderMesh(mesh /*, camera*/) {
+	renderMesh(mesh , camera) {
 		let {gl, glRefMap} = this;
 		let {geometry, material} = mesh;
 		let map = this.useMaterial(material);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.v);
+		gl.uniformMatrix4fv(map.camera, true, camera.transform.v);
 		let vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);
 		gl.drawElements(GL_TRIANGLES, geometry.element.length, GL_UNSIGNED_BYTE, 0);

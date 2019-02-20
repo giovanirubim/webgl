@@ -55,6 +55,38 @@ class Mat {
 		}
 		return res + "]";
 	}
+	get m00() {return this.v[0];}
+	set m00(val) {this.v[0] = value;}
+	get m01() {return this.v[1];}
+	set m01(val) {this.v[1] = value;}
+	get m02() {return this.v[2];}
+	set m02(val) {this.v[2] = value;}
+	get m03() {return this.v[3];}
+	set m03(val) {this.v[3] = value;}
+	get m10() {return this.v[4];}
+	set m10(val) {this.v[4] = value;}
+	get m11() {return this.v[5];}
+	set m11(val) {this.v[5] = value;}
+	get m12() {return this.v[6];}
+	set m12(val) {this.v[6] = value;}
+	get m13() {return this.v[7];}
+	set m13(val) {this.v[7] = value;}
+	get m20() {return this.v[8];}
+	set m20(val) {this.v[8] = value;}
+	get m21() {return this.v[9];}
+	set m21(val) {this.v[9] = value;}
+	get m22() {return this.v[10];}
+	set m22(val) {this.v[10] = value;}
+	get m23() {return this.v[11];}
+	set m23(val) {this.v[11] = value;}
+	get m30() {return this.v[12];}
+	set m30(val) {this.v[12] = value;}
+	get m31() {return this.v[13];}
+	set m31(val) {this.v[13] = value;}
+	get m32() {return this.v[14];}
+	set m32(val) {this.v[14] = value;}
+	get m33() {return this.v[15];}
+	set m33(val) {this.v[15] = value;}
 }
 
 class Vec {
@@ -73,10 +105,10 @@ class Vec {
 	}
 	toTranslation() {
 		return new Mat([
-			1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			this.x, this.y, this.z, 1
+			1, 0, 0, this.x,
+			0, 1, 0, this.y,
+			0, 0, 1, this.z,
+			0, 0, 0, 1
 		]);
 	}
 	get x() {return this.v[0];}
