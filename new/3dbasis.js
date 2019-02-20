@@ -13,8 +13,9 @@ class Mat {
 				let v = this.v = new Float32Array(16);
 				for (let i=0; i<4; ++i) {
 					let c = i << 2;
+					let row = arg[i];
 					for (let j=0; j<4; ++j) {
-						v[c|j] = arg[i][j];
+						v[c|j] = row[j];
 					}
 				}
 				return;
@@ -68,6 +69,14 @@ class Vec {
 			0, this.y, 0, 0,
 			0, 0, this.z, 0,
 			0, 0, 0, 1
+		]);
+	}
+	toTranslation() {
+		return new Mat([
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			this.x, this.y, this.z, 1
 		]);
 	}
 	get x() {return this.v[0];}

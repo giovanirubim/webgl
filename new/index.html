@@ -11,26 +11,28 @@
 <script type="text/javascript">
 
 	let vShader = new Shader();
-	vShader.source = `
-		#version 300 es
-		precision highp float;
-		layout (location = 0) in vec3 vertexCoord;
-		layout (location = 1) in vec3 vertexColor;
-		layout (location = 2) in vec2 vertexUV;
-		uniform float one;
-		void main() {
-			gl_Position = vec4(vertexCoord, 1.0)*one;
-		}`.trim();
+	vShader.source =
+		`	#version 300 es
+			precision highp float;
+			layout (location = 0) in vec3 vertexCoord;
+			layout (location = 1) in vec3 vertexColor;
+			layout (location = 2) in vec2 vertexUV;
+			uniform mat4 projection;
+			uniform mat4 camera;
+			uniform mat4 transform;
+			void main() {
+				gl_Position = vec4(vertexCoord, 1.0)*transform;
+			}`.trim();
 	vShader.type = "vertex";
 
 	let fShader = new Shader();
-	fShader.source = `
-		#version 300 es
-		precision highp float;
-		out vec4 FragColor;
-		void main() {
-		    FragColor = vec4(0.0, 0.5, 1.0, 1.0);
-		}`.trim();
+	fShader.source =
+		`	#version 300 es
+			precision highp float;
+			out vec4 FragColor;
+			void main() {
+			    FragColor = vec4(0.0, 0.5, 1.0, 1.0);
+			}`;
 	fShader.type = "frag";
 
 	var geometry = new Geometry();
@@ -57,14 +59,23 @@
 
 	var program = new Program(vShader, fShader);
 	var material = new Material(program, {
-		"one": {value: 1, type: UNIFORM_INT | 1}
+		temp: {
+			value: new Float32Array([0.4, 0.5]),
+			type: UNIFORM_FLOAT | 2
+		}
 	});
 	var mesh = new Mesh(geometry, material);
+	mesh.transform = new Mat([
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	]);
 
 	let ctx = new WebGL2Context();
 
 	ctx.bindCanvas(document.querySelector("canvas"));
-	ctx.renderMesh(mesh);
 	ctx.clear();
+	ctx.renderMesh(mesh);
 
 </script>

@@ -93,6 +93,20 @@ class Mesh {
 		]);
 	}
 }
+class Camera {
+	constructor() {
+		this.transform = new Matrix([
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		]);
+	}
+	translate(vec) {
+		this.transform = vec.toTranslation().mul(this.transform);
+		return this;
+	}
+}
 class WebGL2Context {
 	constructor() {
 		this.gl = null;
@@ -102,7 +116,7 @@ class WebGL2Context {
 		this.start_y = null;
 		this.size_x = null;
 		this.size_y = null;
-		this.current_program_id = null;
+		this.current_program = null;
 		this.current_material_id = null;
 	}
 	compileShader(shader) {
@@ -149,13 +163,43 @@ class WebGL2Context {
 		console.log("geometry created");
 		return this.glRefMap[geometry.id] = vao;
 	}
-	setUniforms(material) {
-	}
 	useMaterial(material) {
-		let {gl, current_program_id, current_material_id, glRefMap} = this;
+		let {gl, current_program, current_material_id, glRefMap, locationMap} = this;
 		if (material.id === current_material_id) return;
 		let program = material.program;
 		let progGlRef = glRefMap[program.id] || this.bindProgram(program);
+		if (program !== current_program) {
+			gl.useProgram(progGlRef);
+			this.current_program = program;
+		}
+		let map = locationMap[program.id] || (locationMap[program.id] = {});
+		for (let a=material.uniforms, i=a.length; i;) {
+			let {name, type, value} = a[--i];
+			let location = map[name] || (map[name] = gl.getUniformLocation(progGlRef, name));
+			switch (type) {
+				case (UNIFORM_INT | 1): gl.uniform1i(location, value); break;
+				case (UNIFORM_INT | 2): gl.uniform2iv(location, value); break;
+				case (UNIFORM_INT | 3): gl.uniform3iv(location, value); break;
+				case (UNIFORM_INT | 4): gl.uniform4iv(location, value); break;
+				case (UNIFORM_FLOAT | 1): gl.uniform1f(location, value); break;
+				case (UNIFORM_FLOAT | 2): gl.uniform2fv(location, value); break;
+				case (UNIFORM_FLOAT | 3): gl.uniform3fv(location, value); break;
+				case (UNIFORM_FLOAT | 4): gl.uniform4fv(location, value); break;
+				case (UNIFORM_MAT | 2): gl.uniformMatrix2fv(location, true, value); break;
+				case (UNIFORM_MAT | 3): gl.uniformMatrix3fv(location, true, value); break;
+				case (UNIFORM_MAT | 4): gl.uniformMatrix4fv(location, true, value); break;
+			}
+		}
+		if (map.transform === undefined) {
+			map.transform = gl.getUniformLocation(progGlRef, "transform");
+		}
+		if (map.camera === undefined) {
+			map.camera = gl.getUniformLocation(progGlRef, "camera");
+		}
+		if (map.projection === undefined) {
+			map.projection = gl.getUniformLocation(progGlRef, "projection");
+		}
+		return map;
 	}
 	bindCanvas(canvas) {
 		this.start_x = 0;
@@ -173,10 +217,13 @@ class WebGL2Context {
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
-	renderMesh(mesh) {
+	renderMesh(mesh /*, camera*/) {
 		let {gl, glRefMap} = this;
 		let {geometry, material} = mesh;
-		this.useMaterial(material);
-		let gGlRef = glRefMap[geometry.id] || this.bindGeometry(geometry);
+		let map = this.useMaterial(material);
+		gl.uniformMatrix4fv(map.transform, true, mesh.transform.v);
+		let vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
+		gl.bindVertexArray(vao);
+		gl.drawElements(GL_TRIANGLES, geometry.element.length, GL_UNSIGNED_BYTE, 0);
 	}
 }
