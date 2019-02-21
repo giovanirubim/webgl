@@ -52,8 +52,6 @@ class Material {
 			let obj = uniforms[name];
 			let value = obj.value;
 			let type = obj.type;
-
-			/* Set proper type and value */
 			if (type === undefined) {
 				if (value instanceof Mat) {
 					value = value.v;
@@ -67,10 +65,14 @@ class Material {
 					type = UNIFORM_FLOAT | 1;
 				}
 			}
-
 			array.push({name, type, value});
 		}
 		this.uniforms = array;
+		this.texture = null;
+	}
+	addTexture(texture) {
+		this.texture = texture;
+		return this;
 	}
 }
 class Transformable {
@@ -137,8 +139,10 @@ class Camera extends Transformable {
 	}
 }
 class Texture {
-	constructor(img) {
+	constructor(img, useMipmap) {
+		this.id = Symbol();
 		this.img = img;
+		this.useMipmap = useMipmap == null || useMipmap;
 	}
 }
 class WebGL2Context {
@@ -152,6 +156,9 @@ class WebGL2Context {
 		this.size_y = null;
 		this.current_program = null;
 		this.current_material_id = null;
+		this.texIdToIndex = {};
+		this.texIndexToId = {};
+		this.nextTexIndex = 0;
 	}
 	compileShader(shader) {
 		let gl = this.gl;
@@ -162,7 +169,6 @@ class WebGL2Context {
 		if (info) {
 			throw new Error(info);
 		}
-		console.log("shader compiled");
 		return this.glRefMap[shader.id] = glRef;
 	}
 	bindProgram(program) {
@@ -174,7 +180,6 @@ class WebGL2Context {
 		gl.attachShader(glRef, vShader);
 		gl.attachShader(glRef, fShader);
 		gl.linkProgram(glRef);
-		console.log("program created");
 		return this.glRefMap[program.id] = glRef;
 	}
 	bindGeometry(geometry) {
@@ -194,8 +199,10 @@ class WebGL2Context {
 		gl.enableVertexAttribArray(2);
 		gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		gl.bufferData(GL_ELEMENT_ARRAY_BUFFER, geometry.element, GL_STATIC_DRAW);
-		console.log("geometry created");
 		return this.glRefMap[geometry.id] = vao;
+	}
+	bindTexture(texture) {
+		let {gl, texIdToIndex} = this;
 	}
 	useMaterial(material) {
 		let {gl, current_program, current_material_id, glRefMap, locationMap} = this;
