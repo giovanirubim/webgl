@@ -33,58 +33,59 @@
 		xhttp.send();
 	};
 
-	let cubeSize = 4;
-
-	let geometry = new Geometry();
-	let p1 = cubeSize*0.5;
-	let p0 = -p1;
-	let c0 = 0.2, c1 = 0.8;
-	let u0 = 0.0, u1 = 1.0;
-
-	geometry.attrArray = new Float32Array([
-
-		p0, p0, p0,
-		c0, c0, c0,
-		u0, u0,
-
-		p0, p1, p0,
-		c0, c1, c0,
-		u0, u1,
-
-		p1, p1, p0,
-		c1, c1, c0,
-		u1, u1,
-
-		p1, p0, p0,
-		c1, c0, c0,
-		u1, u0,
-
-		p0, p0, p1,
-		c0, c0, c1,
-		u0, u0,
-
-		p0, p1, p1,
-		c0, c1, c1,
-		u0, u1,
-
-		p1, p1, p1,
-		c1, c1, c1,
-		u1, u1,
-
-		p1, p0, p1,
-		c1, c0, c1,
-		u1, u0
-
-	]);
-
-	geometry.element = new Uint8Array([
-		0, 1, 2, 0, 2, 3,
-		4, 5, 6, 4, 6, 7,
-		0, 1, 5, 0, 5, 4,
-		3, 2, 6, 3, 6, 7,
-		0, 4, 7, 0, 7, 3,
-		1, 5, 6, 1, 6, 2
-	]);
+	function createCubeGeometry(size) {
+		let geometry = new Geometry();
+		let nv = 0;
+		let a = -1, b = 1;
+		let face = {
+			pos: [
+				a, a, a,
+				a, b, a,
+				b, b, a,
+				b, a, a
+			],
+			uv: [
+				0, 0,
+				0, 1,
+				1, 1,
+				1, 0
+			],
+			color: 0.1,
+			normal: [0, 0, -1],
+			n: 4,
+			element: [0, 1, 2, 0, 2, 3],
+		};
+		let rotateObj = obj => {
+			
+		};
+		let attrArray = [];
+		let elementArray = [];
+		let addObj = obj => {
+			let color = obj.color;
+			let normal = obj.normal;
+			for (let i=0; i<obj.n; ++i) {
+				attrArray.push(obj.pos[i*3 + 0]);
+				attrArray.push(obj.pos[i*3 + 1]);
+				attrArray.push(obj.pos[i*3 + 2]);
+				attrArray.push(color);
+				attrArray.push(color);
+				attrArray.push(color);
+				attrArray.push(obj.uv[i*2 + 0]);
+				attrArray.push(obj.uv[i*2 + 1]);
+				attrArray.push(normal[0]);
+				attrArray.push(normal[1]);
+				attrArray.push(normal[2]);
+			}
+			for (let i=0; i<obj.element.length; ++i) {
+				elementArray.push(obj.element[i]);
+			}
+		};
+		addObj(face);
+		geometry.attrArray = new Float32Array(attrArray);
+		geometry.element = new Int8Array(elementArray);
+		console.log(geometry);
+		return geometry;
+	}
 
 	function render() {
 		ctx.clear();
@@ -99,13 +100,17 @@
 		program = new Program(vShader, fShader);
 		material = new Material(program);
 		material.addTexture(texture);
-		mesh = new Mesh(geometry, material);
-		mesh.localRotate(Math.PI/4, 0, Math.PI/4, "ZYX");
-		mesh.translate(0, 0, 54);
-		camera = new Camera(Math.atan(18/36), 16/9, 36, 72);
+		mesh = new Mesh(createCubeGeometry(4), material);
+		// mesh.localRotate(Math.PI/4, 0, Math.PI/4, "ZYX");
+		mesh.translate(0, 0, 5);
+		camera = new Camera(Math.atan(18/36), 16/9, 1, 72);
 		ctx = new WebGL2Context();
 		ctx.bindCanvas(document.querySelector("canvas"));
-		render();
+		ctx.bindTexture(texture);
+		setInterval(function(){
+			mesh.localRotate(0, 0.001, 0);
+			render();
+		}, 0);
 	}
 
 	window.addEventListener("load", function(){

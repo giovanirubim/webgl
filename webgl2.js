@@ -9,7 +9,18 @@ const GL_DEPTH_TEST = WebGL2RenderingContext.DEPTH_TEST;
 const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
 const GL_FLOAT = WebGL2RenderingContext.FLOAT;
 const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
+const GL_LINEAR_MIPMAP_LINEAR = WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
+const GL_LINEAR = WebGL2RenderingContext.LINEAR;
+const GL_NEAREST = WebGL2RenderingContext.NEAREST;
+const GL_REPEAT = WebGL2RenderingContext.REPEAT;
+const GL_RGBA = WebGL2RenderingContext.RGBA;
 const GL_STATIC_DRAW = WebGL2RenderingContext.STATIC_DRAW;
+const GL_TEXTURE_2D = WebGL2RenderingContext.TEXTURE_2D;
+const GL_TEXTURE_BASE_LEVEL = WebGL2RenderingContext.TEXTURE_BASE_LEVEL;
+const GL_TEXTURE_MAG_FILTER = WebGL2RenderingContext.TEXTURE_MAG_FILTER;
+const GL_TEXTURE_MAX_LOD = WebGL2RenderingContext.TEXTURE_MAX_LOD;
+const GL_TEXTURE_MIN_FILTER = WebGL2RenderingContext.TEXTURE_MIN_FILTER;
+const GL_TEXTURE_WRAP_S = WebGL2RenderingContext.TEXTURE_WRAP_S;
 const GL_TRIANGLES = WebGL2RenderingContext.TRIANGLES;
 const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
@@ -142,7 +153,6 @@ class Texture {
 	constructor(img, useMipmap) {
 		this.id = Symbol();
 		this.img = img;
-		this.useMipmap = useMipmap == null || useMipmap;
 	}
 }
 class WebGL2Context {
@@ -191,18 +201,32 @@ class WebGL2Context {
 		gl.bindVertexArray(vao);
 		gl.bindBuffer(GL_ARRAY_BUFFER, vbo);
 		gl.bufferData(GL_ARRAY_BUFFER, geometry.attrArray, GL_STATIC_DRAW);
-		gl.vertexAttribPointer(0, 3, GL_FLOAT, false, bpe*8, 0);
-		gl.vertexAttribPointer(1, 3, GL_FLOAT, false, bpe*8, bpe*3);
-		gl.vertexAttribPointer(2, 2, GL_FLOAT, false, bpe*8, bpe*6);
+		let stride = bpe*11;
+		gl.vertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
+		gl.vertexAttribPointer(1, 3, GL_FLOAT, false, stride, bpe*3);
+		gl.vertexAttribPointer(2, 2, GL_FLOAT, false, stride, bpe*6);
+		gl.vertexAttribPointer(3, 3, GL_FLOAT, false, stride, bpe*8);
 		gl.enableVertexAttribArray(0);
 		gl.enableVertexAttribArray(1);
 		gl.enableVertexAttribArray(2);
+		gl.enableVertexAttribArray(3);
 		gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		gl.bufferData(GL_ELEMENT_ARRAY_BUFFER, geometry.element, GL_STATIC_DRAW);
 		return this.glRefMap[geometry.id] = vao;
 	}
 	bindTexture(texture) {
 		let {gl, texIdToIndex} = this;
+		let glRef = gl.createTexture();
+		let index = this.nextTexIndex ++;
+		this.nextTexIndex &= 15;
+		gl.bindTexture(GL_TEXTURE_2D, glRef);
+		gl.texImage2D(GL_TEXTURE_2D, index, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, texture.img);
+		gl.generateMipmap(GL_TEXTURE_2D);
+		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
 	}
 	useMaterial(material) {
 		let {gl, current_program, current_material_id, glRefMap, locationMap} = this;
