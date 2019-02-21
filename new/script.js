@@ -53,14 +53,39 @@ geometry.attrArray = new Float32Array([
 
 	p1, p0, p0,
 	c1, c0, c0,
+	u1, u0,
+
+	p0, p0, p1,
+	c0, c0, c1,
+	u0, u0,
+
+	p0, p1, p1,
+	c0, c1, c1,
+	u0, u1,
+
+	p1, p1, p1,
+	c1, c1, c1,
+	u1, u1,
+
+	p1, p0, p1,
+	c1, c0, c1,
 	u1, u0
 
 ]);
-geometry.element = new Uint8Array([0, 1, 2, 0, 2, 3]);
+geometry.element = new Uint8Array([
+	0, 1, 2, 0, 2, 3,
+	4, 5, 6, 4, 6, 7,
+	0, 1, 5, 0, 5, 4,
+	3, 2, 6, 3, 6, 7,
+	0, 4, 7, 0, 7, 3,
+	1, 5, 6, 1, 6, 2
+]);
 
 let program = new Program(vShader, fShader);
 let material = new Material(program);
 let mesh = new Mesh(geometry, material);
+mesh.localRotate(0, 0, Math.PI/4);
+mesh.localRotate(Math.PI/4, 0, 0);
 
 let camera = new Camera(scrSize, scrSize, near, far);
 let ctx = new WebGL2Context();
@@ -74,7 +99,7 @@ window.addEventListener("load", function(){
 	ctx.bindCanvas(document.querySelector("canvas"));
 	mesh.translate(0, 0, -15);
 	setInterval(function(){
-		mesh.localRotate(0, 0.1, 0);
+		mesh.localRotate(0, 0.02, 0);
 		render();
 	}, 10);
 });
