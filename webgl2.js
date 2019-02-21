@@ -88,15 +88,15 @@ class Transformable {
 		v[7] += y;
 		v[11] += z;
 	}
-	rotate(x, y, z) {
-		this.transform = new EulerRotation(x, y, z).toMatrix().mul(this.transform);
+	rotate(x, y, z, order) {
+		this.transform = new EulerRotation(x, y, z, order).toMatrix().mul(this.transform);
 	}
-	localRotate(x, y, z) {
+	localRotate(x, y, z, order) {
 		let v = this.transform.v;
 		let dx = v[ 3];
 		let dy = v[ 7];
 		let dz = v[11];
-		this.rotate(x, y, z);
+		this.rotate(x, y, z, order);
 		v = this.transform.v;
 		v[ 3] = dx;
 		v[ 7] = dy;
@@ -119,28 +119,26 @@ class Mesh extends Transformable {
 	}
 }
 class Camera extends Transformable {
-	constructor(sx, sy, n, f) {
+	constructor(angle, ratio, n, f) {
 		super();
-		let r = sx*0.5;
-		let l = -r;
-		let t = sy*0.5;
-		let b = -t;
-		let A = 2*n/(r - l);
-		let B = (r + l)/(r - l);
-		let C = 2*n/(t - b);
-		let D = (t + b)/(t - b);
-		let E = (n + f)/(n - f);
-		let F = 2*n*f/(n - f);
+		let h = 2*n*Math.tan(angle);
+		let w = ratio*h;
+		let N = 2*n;
 		this.transform = new Mat([
-			A, 0,  B, 0,
-			0, C,  D, 0,
-			0, 0,  E, F,
-			0, 0, -1, 0
+			N/w, 0, 0, 0,
+			0, N/h, 0, 0,
+			0, 0, (f+n)/(f-n), N*f/(n-f),
+			0, 0, 1, 0
 		]);
 	}
 	translate(vec) {
 		this.transform = vec.toTranslation().mul(this.transform);
 		return this;
+	}
+}
+class Texture {
+	constructor(img) {
+		this.img = img;
 	}
 }
 class WebGL2Context {
