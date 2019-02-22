@@ -35,55 +35,50 @@
 
 	function createCubeGeometry(size) {
 		let geometry = new Geometry();
-		let nv = 0;
-		let a = -1, b = 1;
-		let face = {
-			pos: [
-				a, a, a,
-				a, b, a,
-				b, b, a,
-				b, a, a
-			],
-			uv: [
-				0, 0,
-				0, 1,
-				1, 1,
-				1, 0
-			],
-			color: 0.1,
-			normal: [0, 0, -1],
-			n: 4,
-			element: [0, 1, 2, 0, 2, 3],
-		};
-		let rotateObj = obj => {
-			
-		};
-		let attrArray = [];
-		let elementArray = [];
-		let addObj = obj => {
-			let color = obj.color;
-			let normal = obj.normal;
-			for (let i=0; i<obj.n; ++i) {
-				attrArray.push(obj.pos[i*3 + 0]);
-				attrArray.push(obj.pos[i*3 + 1]);
-				attrArray.push(obj.pos[i*3 + 2]);
-				attrArray.push(color);
-				attrArray.push(color);
-				attrArray.push(color);
-				attrArray.push(obj.uv[i*2 + 0]);
-				attrArray.push(obj.uv[i*2 + 1]);
-				attrArray.push(normal[0]);
-				attrArray.push(normal[1]);
-				attrArray.push(normal[2]);
+		let n = 0;
+		let vA = [];
+		let vE = [];
+		let uv = [
+			{x: 0, y: 0},
+			{x: 1, y: 0},
+			{x: 1, y: 1},
+			{x: 0, y: 1}
+		];
+		let addFace = (r, g, b, ry) => {
+			let vPos = [
+				new Vec(-1, -1, -1),
+				new Vec( 1, -1, -1),
+				new Vec( 1,  1, -1),
+				new Vec(-1,  1, -1)
+			];
+			ry *= Math.PI/180;
+			let m = new EulerRotation(0, ry, 0).toMatrix();
+			let normal = m.mul(new Vec(0, 0, -1));
+			for (let i=0; i<4; ++i) {
+				let pos = m.mul(vPos[i]);
+				vA.push(pos.x);
+				vA.push(pos.y);
+				vA.push(pos.z);
+				vA.push(r);
+				vA.push(g);
+				vA.push(b);
+				vA.push(uv[i].x);
+				vA.push(uv[i].y);
+				vA.push(normal.x);
+				vA.push(normal.y);
+				vA.push(normal.z);
 			}
-			for (let i=0; i<obj.element.length; ++i) {
-				elementArray.push(obj.element[i]);
-			}
+			vE.push(n + 0);
+			vE.push(n + 1);
+			vE.push(n + 2);
+			vE.push(n + 0);
+			vE.push(n + 2);
+			vE.push(n + 3);
+			n += 4;
 		};
-		addObj(face);
-		geometry.attrArray = new Float32Array(attrArray);
-		geometry.element = new Int8Array(elementArray);
-		console.log(geometry);
+		addFace(0, 0.5, 1, 0);
+		geometry.attrArray = new Float32Array(vA);
+		geometry.element = new Int8Array(vE);
 		return geometry;
 	}
 

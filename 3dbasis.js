@@ -25,6 +25,19 @@ class Mat {
 		}
 	}
 	mul(arg) {
+		if (arg instanceof Vec) {
+			let res = new Vec();
+			let v1 = this.v;
+			let v2 = arg.v;
+			let v3 = res.v;
+			for (let i=0; i<4; ++i) {
+				for (let j=0; j<4; ++j) {
+					v3[i] += v1[i*4 + j]*v2[i];
+				}
+			}
+			console.log(v2.join(", ") + " => " + v3.join(", "));
+			return res;
+		}
 		let res = new Mat(0);
 		let v1 = this.v;
 		let v2 = arg.v;
@@ -108,6 +121,9 @@ class Vec {
 			0, 0, 1, this.z,
 			0, 0, 0, 1
 		]);
+	}
+	toString() {
+		return this.v.join(", ");
 	}
 	get x() {return this.v[0];}
 	set x(val) {this.v[0] = val;}
