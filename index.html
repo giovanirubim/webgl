@@ -42,6 +42,7 @@
 			let m = rotate.toEulerRotation();
 			let normal = m.mul(new Vec4(0, 0, -1));
 			let s = size*0.5;
+			let a = 0.3, b = 0.5;
 			[
 				new Vec4(-1, -1, -1, 1),
 				new Vec4( 1, -1, -1, 1),
@@ -53,7 +54,7 @@
 				p = m.mul(p);
 				p = new Vec4(...p.array);
 				vA.push(p.x*s, p.y*s, p.z*s);
-				vA.push(p.x*0.3 + 0.5, p.y*0.3 + 0.5, p.z*0.3 + 0.5);
+				vA.push(p.x*a + b, p.y*a + b, p.z*a + b);
 				vA.push(uv_x, uv_y);
 				vA.push(normal.x, normal.y, normal.z);
 			});
@@ -88,13 +89,13 @@
 		material.addTexture(texture);
 		mesh = new Mesh(createCubeGeometry(4), material);
 		mesh.localRotate(Math.PI/4, 0, Math.PI/4, "ZYX");
-		mesh.translate(0, 0, 30);
+		mesh.translate(0, 0, 8);
 		camera = new Camera(Math.atan(18/36), 16/9, 1, 72);
 		ctx = new WebGL2Context();
 		ctx.bindCanvas(document.querySelector("canvas"));
 		ctx.bindTexture(texture);
 		setInterval(function(){
-			mesh.localRotate(0, 0.005, 0);
+			mesh.localRotate(0, 0.001, 0);
 			render();
 		}, 0);
 	}
