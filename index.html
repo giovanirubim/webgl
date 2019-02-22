@@ -38,45 +38,36 @@
 		let n = 0;
 		let vA = [];
 		let vE = [];
-		let uv = [
-			{x: 0, y: 0},
-			{x: 1, y: 0},
-			{x: 1, y: 1},
-			{x: 0, y: 1}
-		];
-		let addFace = (r, g, b, ry) => {
-			let vPos = [
-				new Vec(-1, -1, -1),
-				new Vec( 1, -1, -1),
-				new Vec( 1,  1, -1),
-				new Vec(-1,  1, -1)
-			];
-			ry *= Math.PI/180;
-			let m = new EulerRotation(0, ry, 0).toMatrix();
-			let normal = m.mul(new Vec(0, 0, -1));
-			for (let i=0; i<4; ++i) {
-				let pos = m.mul(vPos[i]);
-				vA.push(pos.x);
-				vA.push(pos.y);
-				vA.push(pos.z);
-				vA.push(r);
-				vA.push(g);
-				vA.push(b);
-				vA.push(uv[i].x);
-				vA.push(uv[i].y);
-				vA.push(normal.x);
-				vA.push(normal.y);
-				vA.push(normal.z);
-			}
-			vE.push(n + 0);
-			vE.push(n + 1);
-			vE.push(n + 2);
-			vE.push(n + 0);
-			vE.push(n + 2);
-			vE.push(n + 3);
+		let addFace = (rotate) => {
+			let m = rotate.toEulerRotation();
+			let normal = m.mul(new Vec4(0, 0, -1));
+			let s = size*0.5;
+			[
+				new Vec4(-1, -1, -1, 1),
+				new Vec4( 1, -1, -1, 1),
+				new Vec4( 1,  1, -1, 1),
+				new Vec4(-1,  1, -1, 1),
+			].forEach(p => {
+				let uv_x = (p.x + 1)*0.5;
+				let uv_y = (p.y + 1)*0.5;
+				p = m.mul(p);
+				p = new Vec4(...p.array);
+				vA.push(p.x*s, p.y*s, p.z*s);
+				vA.push(p.x*0.3 + 0.5, p.y*0.3 + 0.5, p.z*0.3 + 0.5);
+				vA.push(uv_x, uv_y);
+				vA.push(normal.x, normal.y, normal.z);
+			});
+			[0, 1, 2, 0, 2, 3].forEach(i => {
+				vE.push(i + n);
+			});
 			n += 4;
 		};
-		addFace(0, 0.5, 1, 0);
+		addFace(new Vec4(0, 0, 0));
+		addFace(new Vec4(Math.PI*1.5, 0, 0));
+		addFace(new Vec4(Math.PI, 0, 0));
+		addFace(new Vec4(Math.PI*0.5, 0, 0));
+		addFace(new Vec4(0, Math.PI*0.5, 0));
+		addFace(new Vec4(0, Math.PI*1.5, 0));
 		geometry.attrArray = new Float32Array(vA);
 		geometry.element = new Int8Array(vE);
 		return geometry;
@@ -96,14 +87,14 @@
 		material = new Material(program);
 		material.addTexture(texture);
 		mesh = new Mesh(createCubeGeometry(4), material);
-		// mesh.localRotate(Math.PI/4, 0, Math.PI/4, "ZYX");
-		mesh.translate(0, 0, 5);
+		mesh.localRotate(Math.PI/4, 0, Math.PI/4, "ZYX");
+		mesh.translate(0, 0, 30);
 		camera = new Camera(Math.atan(18/36), 16/9, 1, 72);
 		ctx = new WebGL2Context();
 		ctx.bindCanvas(document.querySelector("canvas"));
 		ctx.bindTexture(texture);
 		setInterval(function(){
-			mesh.localRotate(0, 0.001, 0);
+			mesh.localRotate(0, 0.005, 0);
 			render();
 		}, 0);
 	}
