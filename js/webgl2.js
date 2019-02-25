@@ -131,15 +131,21 @@ class Camera extends Transformable {
 		let h = 2*n*Math.tan(angle);
 		let w = ratio*h;
 		let N = 2*n;
-		this.transform = new Mat4([
+		this.projection = new Mat4([
 			N/w, 0, 0, 0,
 			0, N/h, 0, 0,
 			0, 0, (f+n)/(f-n), N*f/(n-f),
 			0, 0, 1, 0
 		]);
 	}
-	translate(vec) {
-		this.transform = vec.toTranslation().mul(this.transform);
+	translate(x, y, z) {
+		super.translate(-x, -y, -z);
+		return this;
+	}
+	rotate(x, y, z, order) {
+		order = (order || "").trim() || "XYZ";
+		order = order[2] + order[1] + order[0];
+		super.rotate(-x, -y, -z, order);
 		return this;
 	}
 }
@@ -252,8 +258,8 @@ class WebGL2Context {
 		if (map.transform === undefined) {
 			map.transform = gl.getUniformLocation(progGlRef, "transform");
 		}
-		if (map.camera === undefined) {
-			map.camera = gl.getUniformLocation(progGlRef, "camera");
+		if (map.view === undefined) {
+			map.view = gl.getUniformLocation(progGlRef, "view");
 		}
 		if (map.projection === undefined) {
 			map.projection = gl.getUniformLocation(progGlRef, "projection");
@@ -276,14 +282,16 @@ class WebGL2Context {
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
-	renderMesh(mesh , camera) {
+	renderMesh(mesh, camera) {
 		let {gl, glRefMap} = this;
 		let {geometry, material} = mesh;
 		let map = this.useMaterial(material);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.array);
-		gl.uniformMatrix4fv(map.camera, true, camera.transform.array);
+		gl.uniformMatrix4fv(map.view, true, camera.transform.array);
+		gl.uniformMatrix4fv(map.projection, true, camera.projection.array);
 		let vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);
 		gl.drawElements(GL_TRIANGLES, geometry.element.length, GL_UNSIGNED_BYTE, 0);
+		return this;
 	}
 }
