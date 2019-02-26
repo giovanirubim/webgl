@@ -77,7 +77,7 @@ function ready() {
 	material.addTexture(texture);
 	mesh = new Mesh(createCubeGeometry(4), material);
 	mesh.translate(0, 0, 8);
-	camera = new Camera(Math.atan(18/36), 16/9, 1, 72);
+	camera = new Camera(0.4, 16/9, 1, 100);
 	ctx = new WebGL2Context();
 	ctx.bindCanvas(document.querySelector("canvas"));
 	ctx.bindTexture(texture);
