@@ -25,15 +25,23 @@ class Matrix {
 		}
 		return m;
 	}
-	mul(other) {
+	mul(other, target) {
 		let nrows = this.nrows;
 		let ncols = other.ncols;
 		let n = this.ncols;
-		let res = new Matrix(nrows, ncols);
-		for (let i=0; i<nrows; i++) {
-			for (let j=0; j<ncols; j++) {
+		let res, a;
+		if (target === undefined) {
+			res = new Matrix(nrows, ncols);
+			a = res.array;
+		} else if (target instanceof Matrix) {
+			a = (res = target).array;
+		} else {
+			a = res = target;
+		}
+		for (let i=0, c=0; i<nrows; i++) {
+			for (let j=0; j<ncols; j++, c++) {
 				for (let k=0; k<n; k++) {
-					res.add(i, j, this.get(i, k)*other.get(k, j));
+					a[c] += this.get(i, k)*other.get(k, j);
 				}
 			}
 		}

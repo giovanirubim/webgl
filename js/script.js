@@ -1,6 +1,6 @@
 let loadImg = (src, handler) => {
 	let img = document.createElement("img");
-	img.addEventListener("load", _=>{
+	img.addEventListener("load", _ => {
 		handler(img);
 	});
 	img.src = src;
@@ -9,10 +9,10 @@ let loadImg = (src, handler) => {
 
 let loadShader = (src, type, handler) => {
 	let xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-		if (this.readyState === 4 && this.status === 200) {
+	xhttp.onreadystatechange = _ => {
+		if (xhttp.readyState === 4 && xhttp.status === 200) {
 			shader = new Shader();
-			shader.source = this.responseText;
+			shader.source = xhttp.responseText;
 			shader.type = type;
 			handler(shader);
 		}
@@ -21,13 +21,13 @@ let loadShader = (src, type, handler) => {
 	xhttp.send();
 };
 
-function createCubeGeometry(size) {
+let createCubeGeometry = size => {
 	let geometry = new Geometry();
 	let n = 0;
 	let vA = [];
 	let vE = [];
-	let addFace = (rotate) => {
-		let m = rotate.toEulerRotation();
+	let addFace = (x, y, z) => {
+		let m = new Vec4(x, y, z).toEulerRotation();
 		let normal = m.mul(new Vec4(0, 0, -1));
 		let s = size*0.5;
 		let a = 0.3, b = 0.5;
@@ -51,26 +51,26 @@ function createCubeGeometry(size) {
 		});
 		n += 4;
 	};
-	addFace(new Vec4(0, 0, 0));
-	addFace(new Vec4(Math.PI*1.5, 0, 0));
-	addFace(new Vec4(Math.PI, 0, 0));
-	addFace(new Vec4(Math.PI*0.5, 0, 0));
-	addFace(new Vec4(0, Math.PI*0.5, 0));
-	addFace(new Vec4(0, Math.PI*1.5, 0));
+	addFace(0, 0, 0);
+	addFace(Math.PI*1.5, 0, 0);
+	addFace(Math.PI, 0, 0);
+	addFace(Math.PI*0.5, 0, 0);
+	addFace(0, Math.PI*0.5, 0);
+	addFace(0, Math.PI*1.5, 0);
 	geometry.attrArray = new Float32Array(vA);
 	geometry.element = new Int8Array(vE);
 	return geometry;
-}
+};
 
-function render() {
+let render = _ => {
 	ctx.clear();
 	ctx.renderMesh(mesh, camera);
-}
+};
 
 let program, material, mesh, camera, ctx, vShader, fShader, texture;
 let nLoads = 4;
 
-function ready() {
+let ready = _ => {
 	if (--nLoads) return;
 	program = new Program(vShader, fShader);
 	material = new Material(program);
@@ -83,19 +83,19 @@ function ready() {
 	ctx.bindTexture(texture);
 	setInterval(render, 10);
 	render();
-}
+};
 
-window.addEventListener("load", function(){
+window.addEventListener("load", _ => {
 	ready();
 	let start = null;
 	let canvas = document.querySelector("canvas");
-	function handleMousedown(x, y) {
+	let handleMousedown = (x, y) => {
 		start = {x, y, m: mesh.transform};
-	}
-	function handleMouseup(x, y) {
+	};
+	let handleMouseup = (x, y) => {
 		start = null;
-	}
-	function handleMousemove(x, y) {
+	};
+	let handleMousemove = (x, y) => {
 		if (start) {
 			let m = start.m;
 			let dx = x - start.x;
@@ -105,36 +105,36 @@ window.addEventListener("load", function(){
 			mesh.transform = r.toEulerRotation().mul(m);
 			mesh.transform.paste(0, 3, col);
 		}
-	}
-	canvas.addEventListener("mousedown", e=>{
+	};
+	canvas.addEventListener("mousedown", e => {
 		handleMousedown(e.offsetX, e.offsetY);
 	});
-	canvas.addEventListener("mouseup", e=>{
+	canvas.addEventListener("mouseup", e => {
 		handleMouseup(e.offsetX, e.offsetY);
 		start = null;
 	});
-	canvas.addEventListener("mousemove", e=>{
+	canvas.addEventListener("mousemove", e => {
 		if (start && !(e.buttons & 1)) {
 			handleMouseup(e.offsetX, e.offsetY);
 		}
 		handleMousemove(e.offsetX, e.offsetY);
 	});
-	canvas.addEventListener("wheel", e=>{
+	canvas.addEventListener("wheel", e => {
 		camera.translate(0, 0, e.deltaY*0.001);
 	});
 });
 
-loadImg("img/box.png", img=>{
+loadImg("img/box.png", img => {
 	texture = new Texture(img);
 	ready();
 });
 
-loadShader("shaders/vertex.glsl", "vertex", shader=>{
+loadShader("shaders/vertex.glsl", "vertex", shader => {
 	vShader = shader;
 	ready();
 });
 
-loadShader("shaders/fragment.glsl", "fragment", shader=>{
+loadShader("shaders/fragment.glsl", "fragment", shader => {
 	fShader = shader;
 	ready();
 });
