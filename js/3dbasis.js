@@ -1,4 +1,22 @@
 class Matrix {
+	static mul(src1, nrows1, ncols1, src2, ncols2, dst) {
+		for (let i=0, c=0; i<nrows1; i++) {
+			const a = ncols1*i;
+			for (let j=0; j<ncols2; j++, c++) {
+				dst[c] = 0;
+				for (let k=0; k<ncols1; k++) {
+					dst[c] += src1[a + k]*src2[ncols2*k + j];
+				}
+			}
+		}
+	};
+	static transpose(src, nrows, ncols, dst) {
+		for (let i=0, a=0; i<nrows; i++, a+=ncols) {
+			for (let j=0, k=0; j<ncols; j++, k+=nrows) {
+				dst[k + i] = src[a + j];
+			}
+		}
+	}
 	constructor(nrows, ncols) {
 		this.nrows = nrows;
 		this.ncols = ncols;
@@ -26,25 +44,16 @@ class Matrix {
 		return m;
 	}
 	mul(other, target) {
-		let nrows = this.nrows;
-		let ncols = other.ncols;
-		let n = this.ncols;
 		let res, a;
 		if (target === undefined) {
-			res = new Matrix(nrows, ncols);
+			res = new Matrix(this.nrows, this.ncols);
 			a = res.array;
 		} else if (target instanceof Matrix) {
 			a = (res = target).array;
 		} else {
 			a = res = target;
 		}
-		for (let i=0, c=0; i<nrows; i++) {
-			for (let j=0; j<ncols; j++, c++) {
-				for (let k=0; k<n; k++) {
-					a[c] += this.get(i, k)*other.get(k, j);
-				}
-			}
-		}
+		Matrix.mul(this.array, this.ncols, this.nrows, other.array, other.ncols, a);
 		return res;
 	}
 	copy(row, col, nrows, ncols) {
@@ -168,6 +177,37 @@ class Vec4 extends Matrix {
 			0, 0, z, 0,
 			0, 0, 0, 1,
 		]);
+	}
+	add(other) {
+		let dst = this.array;
+		let src = other.array;
+		for (let i=4; i--;) {
+			dst[i] += src[i];
+		}
+		return this;
+	}
+	sub(other) {
+		let dst = this.array;
+		let src = other.array;
+		for (let i=4; i--;) {
+			dst[i] -= src[i];
+		}
+		return this;
+	}
+	length() {
+		let a = this.array;
+		let x = a[0];
+		let y = a[1];
+		let z = a[2];
+		return Math.sqrt(x*x + y*y + z*z);
+	}
+	normalized() {
+		let a = this.array;
+		let x = a[0];
+		let y = a[1];
+		let z = a[2];
+		let m = 1/Math.sqrt(x*x + y*y + z*z);
+		return new Vec4(x*m, y*m, z*m, 1);
 	}
 }
 class Mat4 extends Matrix {

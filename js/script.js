@@ -64,10 +64,10 @@ let createCubeGeometry = size => {
 
 let render = _ => {
 	ctx.clear();
-	ctx.renderMesh(mesh, camera);
+	ctx.renderMesh(cube, camera);
 };
 
-let program, material, mesh, camera, ctx, vShader, fShader, texture;
+let program, material, cube, camera, ctx, vShader, fShader, texture;
 let nLoads = 4;
 
 let ready = _ => {
@@ -75,8 +75,8 @@ let ready = _ => {
 	program = new Program(vShader, fShader);
 	material = new Material(program);
 	material.addTexture(texture);
-	mesh = new Mesh(createCubeGeometry(4), material);
-	mesh.translate(0, 0, 8);
+	cube = new Mesh(createCubeGeometry(4), material);
+	cube.translate(0, 0, 8);
 	camera = new Camera(0.4, 16/9, 1, 100);
 	ctx = new WebGL2Context();
 	ctx.bindCanvas(document.querySelector("canvas"));
@@ -90,7 +90,7 @@ window.addEventListener("load", _ => {
 	let start = null;
 	let canvas = document.querySelector("canvas");
 	let handleMousedown = (x, y) => {
-		start = {x, y, m: mesh.transform};
+		start = {x, y, m: cube.transform};
 	};
 	let handleMouseup = (x, y) => {
 		start = null;
@@ -102,8 +102,8 @@ window.addEventListener("load", _ => {
 			let dy = y - start.y;
 			let r = new Vec4(dy*0.005, dx*0.005, 0, 0);
 			let col = m.copy(0, 3, 3, 1);
-			mesh.transform = r.toEulerRotation().mul(m);
-			mesh.transform.paste(0, 3, col);
+			cube.transform = r.toEulerRotation().mul(m);
+			cube.transform.paste(0, 3, col);
 		}
 	};
 	canvas.addEventListener("mousedown", e => {
