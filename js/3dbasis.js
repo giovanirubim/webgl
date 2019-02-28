@@ -92,6 +92,31 @@ class Mat {
 		return res;
 	}
 
+	copy(row, col, nRows, nCols) {
+		const res = new Mat(nRows, nCols);
+		const src = this.array;
+		const dst = res.array;
+		const mul = this.nCols;
+		let a = row*mul;
+		let b = a + col;
+		for (let i=0, c=0; i<nRows; ++i, a+=mul, b+=mul) {
+			for (let j=b, e=b+nCols; j<e; ++j, ++c) {
+				dst[c] = src[j];
+			}
+		}
+		return res;
+	}
+
+	paste(other, row, col) {
+		const {nRows, nCols, array} = this;
+		let res = new Mat(nRows, nCols);
+		for (let i=0; i<nRows; ++i) {
+			for (let j=0; j<nCols; ++j) {
+				if (i < row || j < col)
+			}
+		}
+	}
+
 	toEulerRotation(order) {
 		order = (order || "").trim().toUpperCase() || "XYZ";
 		let cx = Math.cos(this.x);
