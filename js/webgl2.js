@@ -64,12 +64,13 @@ class Material {
 			let value = obj.value;
 			let type = obj.type;
 			if (type === undefined) {
-				if (value instanceof Mat4) {
+				if (value instanceof Mat) {
+					if (value.nCols === 1) {
+						type = UNIFORM_FLOAT | 4;
+					} else {
+						type = UNIFORM_MAT | 4;
+					}
 					value = value.array;
-					type = UNIFORM_MAT | 4;
-				} else if (value instanceof Vec) {
-					value = value.array;
-					type = UNIFORM_FLOAT | 4;
 				} else if (Number.isInteger(value)) {
 					type = UNIFORM_INT | 1;
 				} else {
@@ -88,19 +89,19 @@ class Material {
 }
 class Transformable {
 	constructor() {
-		this.transform = new Mat4([
+		this.transform = mat4(
 			1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, 1, 0,
 			0, 0, 0, 1
-		]);
+		);
 	}
 	translate(x, y, z) {
 		this.transform.add(0, 3, x).add(1, 3, y).add(2, 3, z);
 		return this;
 	}
 	rotate(x, y, z, order) {
-		this.transform = new Vec4(x, y, z).toEulerRotation(order).mul(this.transform);
+		this.transform = vec4(x, y, z).toEulerRotation(order).mul(this.transform);
 		return this;
 	}
 	localRotate(x, y, z, order) {
@@ -131,12 +132,12 @@ class Camera extends Transformable {
 		let h = 2*n*Math.tan(angle);
 		let w = ratio*h;
 		let N = 2*n;
-		this.projection = new Mat4([
+		this.projection = mat4(
 			N/w, 0, 0, 0,
 			0, N/h, 0, 0,
 			0, 0, (f+n)/(f-n), N*f/(n-f),
 			0, 0, 1, 0
-		]);
+		);
 	}
 	translate(x, y, z) {
 		super.translate(-x, -y, -z);
