@@ -12,6 +12,7 @@ class Mat {
 		} else {
 			this.array = new Float32Array(size);
 		}
+		this.buffer = null;
 	}
 
 	static mul(src1, nRows1, nCols1, src2, nCols2, dst) {
@@ -56,16 +57,59 @@ class Mat {
 		}
 		if (l < size) {
 			throw new Error("Bad arguments: missing values");
-		} else if (l > size) {
+		}
+		if (l > size) {
 			throw new Error("Bad arguments: too many values");
 		}
 		return this;
 	}
 
+	add(other) {
+		if (typeof other === "number") {
+			const dst = this.array.slice();
+			const res = new Mat(this.nRows, this.nCols, dst);
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] += other;
+			}
+			return res;
+		}
+		if (other.size === this.size) {
+			const dst = this.array.slice();
+			const src = other.array;
+			const res = new Mat(this.nRows, this.nCols, dst);
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] += src[i];
+			}
+			return res;
+		}
+		throw new Error();
+	}
+
+	sadd(other) {
+		if (typeof other === "number") {
+			const dst = this.array;
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] += other;
+			}
+			return this;
+		}
+		if (other.size === this.size) {
+			const dst = this.array;
+			const src = other.array;
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] += src[i];
+			}
+			return this;
+		}
+		throw new Error();
+	}
+
 	mul(other) {
 		if (typeof other === "number") {
 			const res = new Mat(this.nRows, this.nCols);
-			for (const src=this.array, dst=res.array, i=this.size; i--;) {
+			const src = this.array;
+			const dst = res.array;
+			for (let i=this.size; i--;) {
 				dst[i] = src[i]*other;
 			}
 			return res;
@@ -74,9 +118,11 @@ class Mat {
 			const res = new Mat(this.nRows, other.nCols);
 			Mat.mul(this.array, this.nRows, this.nCols, other.array, other.nCols, res.array);
 			return res;
-		} else if (this.nRows === other.nCols) {
+		}
+		if (this.nRows === other.nCols) {
 			return other.mul(this);
-		} else if (other.size === this.size) {
+		}
+		if (other.size === this.size) {
 			const src = other.array;
 			const dst = this.array.slice();
 			const res = new Mat(this.nRows, this.nCols, dst);
@@ -85,6 +131,48 @@ class Mat {
 			}
 			return res;
 		}
+		throw new Error();
+	}
+
+	smul(other) {
+		if (typeof other === "number") {
+			const dst = this.array;
+			for(let i=0, n=this.size; i<n; ++i) {
+				dst[i] *= other;
+			}
+			return this;
+		}
+		if (this.nCols === other.nRows) {
+			const array = this.array;
+			let buffer = this.buffer;
+			if (buffer === null) {
+				this.buffer = buffer = new Float32Array(this.size);
+			}
+			Mat.mul(array, this.nRows, this.nCols, other.array, other.nCols, buffer);
+			this.array = buffer;
+			this.buffer = array;
+			return this;
+		}
+		if (this.nRows === other.nCols) {
+			const array = this.array;
+			let buffer = this.buffer;
+			if (buffer === null) {
+				this.buffer = buffer = new Float32Array(this.size);
+			}
+			Mat.mul(other, other.nRows, other.nCols, array, this.nCols, buffer);
+			this.array = buffer;
+			this.buffer = array;
+			return this;
+		}
+		if (other.size === this.size) {
+			const src = other.array;
+			const dst = this.array;
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] *= src[i];
+			}
+			return this;
+		}
+		throw new Error();
 	}
 
 	div(other) {
@@ -99,6 +187,38 @@ class Mat {
 			}
 			return res;
 		}
+		throw new Error();
+	}
+
+	sdiv(other) {
+		if (typeof other === "number") {
+			return this.smul(1/other);
+		}
+		if (other.size === this.size) {
+			const src = other.array;
+			const dst = this.array;
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] /= src[i];
+			}
+			return this;
+		}
+		throw new Error();
+	}
+
+	inversed() {
+		if (this.nRows !== this.nCols) {
+			throw new Error();
+		}
+		const n = this.nRows;
+		const res = new Mat(n, n, this.array.slice());
+		const a = res.array;
+		const delta = n + 1;
+		for (let p=0; p<n; ++p) {
+			let pivot = a[p];
+			if (pivot === 0) {
+				throw new Error();
+			}
+		}
 	}
 
 	transposed() {
@@ -106,6 +226,20 @@ class Mat {
 		const res = new Mat(nCols, nRows);
 		Mat.transpose(this.array, nRows, nCols, res.array);
 		return res;
+	}
+
+	transpose() {
+		const {nRows, nCols, array} = this;
+		let buffer = this.buffer;
+		if (buffer === null) {
+			buffer = new Float32Array(this.size);
+		}
+		Mat.transpose(this.array, nRows, nCols, buffer);
+		this.buffer = array;
+		this.array = buffer;
+		this.nRows = nCols;
+		this.nCols = nRows;
+		return this;
 	}
 
 	copy(row, col, nRows, nCols) {
@@ -298,4 +432,28 @@ function mat3() {
 
 function mat4() {
 	return new Mat(4, 4).place(arguments);
+}
+
+function mat2x3() {
+	return new Mat(2, 3).place(arguments);
+}
+
+function mat2x4() {
+	return new Mat(2, 4).place(arguments);
+}
+
+function mat3x2() {
+	return new Mat(3, 2).place(arguments);
+}
+
+function mat3x4() {
+	return new Mat(3, 4).place(arguments);
+}
+
+function mat4x2() {
+	return new Mat(4, 2).place(arguments);
+}
+
+function mat4x3() {
+	return new Mat(4, 3).place(arguments);
 }

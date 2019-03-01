@@ -80,10 +80,10 @@ class Material {
 			array.push({name, type, value});
 		}
 		this.uniforms = array;
-		this.texture = null;
+		this.textures = [];
 	}
 	addTexture(texture) {
-		this.texture = texture;
+		this.textures.push(texture);
 		return this;
 	}
 }
@@ -97,17 +97,22 @@ class Transformable {
 		);
 	}
 	translate(x, y, z) {
-		this.transform.add(0, 3, x).add(1, 3, y).add(2, 3, z);
+		if (x instanceof Mat) {
+			[x, y, z] = x.array;
+		}
+		this.transform.array[3] += x;
+		this.transform.array[7] += y;
+		this.transform.array[11] += z;
 		return this;
 	}
 	rotate(x, y, z, order) {
-		this.transform = vec4(x, y, z).toEulerRotation(order).mul(this.transform);
+		this.transform = vec4(x, y, z, 1).toEulerRotation(order).mul(this.transform);
 		return this;
 	}
 	localRotate(x, y, z, order) {
 		let col = this.transform.copy(0, 3, 3, 1);
 		this.rotate(x, y, z, order);
-		this.transform.paste(0, 3, col);
+		this.transform = this.transform.paste(col, 0, 3);
 		return this;
 	}
 }
@@ -168,12 +173,12 @@ class WebGL2Context {
 		this.current_program = null;
 		this.current_material_id = null;
 		this.texIdToIndex = {};
-		this.texIndexToId = {};
+		this.texIndexToId = new Array(16);
 		this.nextTexIndex = 0;
 	}
 	compileShader(shader) {
-		let gl = this.gl;
-		let glRef = gl.createShader(shader.enumType);
+		const gl = this.gl;
+		const glRef = gl.createShader(shader.enumType);
 		gl.shaderSource(glRef, shader.source);
 		gl.compileShader(glRef);
 		let info = gl.getShaderInfoLog(glRef);
@@ -184,7 +189,7 @@ class WebGL2Context {
 	}
 	bindProgram(program) {
 		let {gl, glRefMap} = this;
-		let glRef = gl.createProgram();
+		const glRef = gl.createProgram();
 		let {vShader, fShader} = program;
 		vShader = glRefMap[vShader.id] || this.compileShader(vShader);
 		fShader = glRefMap[fShader.id] || this.compileShader(fShader);
@@ -194,7 +199,7 @@ class WebGL2Context {
 		return this.glRefMap[program.id] = glRef;
 	}
 	bindGeometry(geometry) {
-		let gl = this.gl;
+		const gl = this.gl;
 		let vao = gl.createVertexArray();
 		let vbo = gl.createBuffer();
 		let ebo = gl.createBuffer();
@@ -216,11 +221,10 @@ class WebGL2Context {
 		return this.glRefMap[geometry.id] = vao;
 	}
 	bindTexture(texture) {
-		let {gl, texIdToIndex} = this;
-		let glRef = gl.createTexture();
-		let index = this.nextTexIndex ++;
-		this.nextTexIndex &= 15;
+		let {gl, texIdToIndex, texIndexToId} = this;
+		const glRef = gl.createTexture();
 		gl.bindTexture(GL_TEXTURE_2D, glRef);
+		const index = this.getTextureIndex(texture);
 		gl.texImage2D(GL_TEXTURE_2D, index, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, texture.img);
 		gl.generateMipmap(GL_TEXTURE_2D);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -228,6 +232,24 @@ class WebGL2Context {
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
+		return this.glRefMap[texture.id] = glRef;
+	}
+	getTextureIndex(texture) {
+		const {texIdToIndex, texIndexToId} = this;
+		const id = texture.id;
+		let index = texIdToIndex[id];
+		if (index !== undefined) {
+			return index;
+		}
+		index = this.nextTexIndex++;
+		this.nextTexIndex &= 15;
+		const other = texIndexToId[index];
+		if (other !== undefined) {
+			texIdToIndex[other] = undefined;
+		}
+		texIndexToId[index] = id;
+		texIdToIndex[id] = index;
+		return index;
 	}
 	useMaterial(material) {
 		let {gl, current_program, current_material_id, glRefMap, locationMap} = this;
@@ -238,7 +260,15 @@ class WebGL2Context {
 			gl.useProgram(progGlRef);
 			this.current_program = program;
 		}
-		let map = locationMap[program.id] || (locationMap[program.id] = {});
+		const textures = material.textures;
+		const n = textures.length;
+		for (let i=0; i<n; ++i) {
+			const tex = textures[i];
+			if (glRefMap[tex.id] === undefined) {
+				this.bindTexture(tex);
+			}
+		}
+		const map = locationMap[program.id] || (locationMap[program.id] = {});
 		for (let a=material.uniforms, i=a.length; i;) {
 			let {name, type, value} = a[--i];
 			let location = map[name] || (map[name] = gl.getUniformLocation(progGlRef, name));
@@ -272,7 +302,7 @@ class WebGL2Context {
 		this.start_y = 0;
 		this.size_x = canvas.width;
 		this.size_y = canvas.height;
-		let gl = this.gl = canvas.getContext("webgl2");
+		const gl = this.gl = canvas.getContext("webgl2");
 		gl.enable(GL_DEPTH_TEST);
 		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
 		gl.clearColor(0, 0, 0, 1);
