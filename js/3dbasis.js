@@ -1,7 +1,7 @@
 class Mat {
 
 	constructor(nRows, nCols, array) {
-		let size = nRows*nCols;
+		const size = nRows*nCols;
 		this.nRows = nRows;
 		this.nCols = nCols;
 		this.size = size;
@@ -56,6 +56,8 @@ class Mat {
 		}
 		if (l < size) {
 			throw new Error("Bad arguments: missing values");
+		} else if (l > size) {
+			throw new Error("Bad arguments: too many values");
 		}
 		return this;
 	}
@@ -63,7 +65,7 @@ class Mat {
 	mul(other) {
 		if (typeof other === "number") {
 			const res = new Mat(this.nRows, this.nCols);
-			for (let src=this.array, dst=res.array, i=this.size; i--;) {
+			for (const src=this.array, dst=res.array, i=this.size; i--;) {
 				dst[i] = src[i]*other;
 			}
 			return res;
@@ -74,6 +76,14 @@ class Mat {
 			return res;
 		} else if (this.nRows === other.nCols) {
 			return other.mul(this);
+		} else if (other.size === this.size) {
+			const src = other.array;
+			const dst = this.array.slice();
+			const res = new Mat(this.nRows, this.nCols, dst);
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] *= src[i];
+			}
+			return res;
 		}
 	}
 
@@ -81,7 +91,13 @@ class Mat {
 		if (typeof other === "number") {
 			return this.mul(1/other);
 		} else if (other.size === this.size) {
-			const res = new Mat(this.nRows, this.nCols)
+			const src = other.array;
+			const dst = this.array.slice();
+			const res = new Mat(this.nRows, this.nCols, dst);
+			for (let i=0, n=this.size; i<n; ++i) {
+				dst[i] /= src[i];
+			}
+			return res;
 		}
 	}
 
@@ -108,13 +124,18 @@ class Mat {
 	}
 
 	paste(other, row, col) {
-		const {nRows, nCols, array} = this;
-		let res = new Mat(nRows, nCols);
-		for (let i=0; i<nRows; ++i) {
+		const {nRows, nCols} = other;
+		const res = new Mat(this.nRows, this.nCols, this.array.slice());
+		const dst = res.array, src = other.array;
+		const a = this.nCols;
+		const d = nRows*nCols;
+		let b = a*row + col;
+		for (let c=0; c<d; b+=a, c+=nCols) {
 			for (let j=0; j<nCols; ++j) {
-				if (i < row || j < col)
+				dst[b + j] = src[c + j];
 			}
 		}
+		return res;
 	}
 
 	toEulerRotation(order) {
@@ -164,7 +185,7 @@ class Mat {
 	}
 
 	toTranslation() {
-		let {x, y, z} = this;
+		const {x, y, z} = this;
 		return new Mat(4, 4, new Float32Array([
 			1, 0, 0, x,
 			0, 1, 0, y,
@@ -246,11 +267,9 @@ class Mat {
 	get str() {
 		return this.toString();
 	}
-
 	get tstr() {
 		return this.transposed().toString();
 	}
-
 	get vstr() {
 		return this.array.join(", ");
 	}
