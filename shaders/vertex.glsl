@@ -7,10 +7,12 @@ layout (location = 4) in vec3 vertexNormal;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 transform;
-out vec4 vertex_color;
 out vec2 vertex_uv;
+out vec3 vertex_normal;
+out vec3 frag_coord;
 void main() {
-	vertex_color = vec4(vertexColor, 1.0);
 	vertex_uv = vertexUV;
-	gl_Position = projection*view*transform*vec4(vertexCoord, 1.0);
+	vertex_normal = vertexNormal;
+	frag_coord = (transform*vec4(vertexCoord, 1.0)).xyz;
+	gl_Position = projection*inverse(view)*vec4(frag_coord, 1.0);
 }

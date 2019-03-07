@@ -28,6 +28,11 @@ const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
 
+getSrc = img => {
+	let array = img.src.split("/");
+	return array[array.length - 1];
+};
+
 class Shader {
 	constructor() {
 		this.id = Symbol();
@@ -90,6 +95,7 @@ class Material {
 		if (uniformName === undefined) {
 			uniformName = "texture_" + (this.textures.length + 1);
 		}
+		console.log("Adicionando textura " + getSrc(texture.img));
 		this.textures.push({texture, uniformName});
 		return this;
 	}
@@ -158,19 +164,6 @@ class Camera extends Transformable {
 			0, 0, (f+n)/(f-n), N*f/(n-f),
 			0, 0, 1, 0
 		);
-	}
-	lookAt(x, y, z) {
-		if (x instanceof Mat) {
-			[x, y, z] = vec.array;
-		}
-		let ax = 0, ay = 0;
-		let l = Math.sqrt(y*y + z*z);
-		ax = y < 0 ? Math.acos(z/l) : Math.PI*2 - Math.acos(z/l);
-		z = z < 0 ? -l : l;
-		l = Math.sqrt(x*x + z*z);
-		ay = x > 0 ? Math.acos(z/l) : Math.PI*2 - Math.acos(z/l);
-		this.transform = vec3(ax, ay, 0).toEulerRotation();
-		return this;
 	}
 }
 class Texture {
@@ -257,6 +250,7 @@ class WebGL2Context {
 	activeTexture(id, glRef) {
 		const {gl, texIdToIndex, texIndexToId} = this;
 		let index = texIdToIndex[id];
+		let binded = true;
 		if (index === undefined) {
 			index = this.nextTexIndex ++;
 			this.nextTexIndex %= GL_MAX_TEX;
@@ -266,9 +260,13 @@ class WebGL2Context {
 			}
 			texIndexToId[index] = id;
 			texIdToIndex[id] = index;
+			binded = false;
 		}
 		gl.activeTexture(GL_TEXTURE0 + index);
-		gl.bindTexture(GL_TEXTURE_2D, glRef);
+		if (!binded) {
+			console.log("Binded");
+			gl.bindTexture(GL_TEXTURE_2D, glRef);
+		}
 		return index;
 	}
 	useMaterial(material) {

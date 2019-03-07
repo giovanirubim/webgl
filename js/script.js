@@ -43,12 +43,23 @@ let loadShader = (src, type, handler) => {
 	xhttp.send();
 };
 
+let createCylinderGeometry = (radius, width, segments) => {
+	const dRad = Math.PI*2/segments;
+	const vX = new Array(segments);
+	const vY = new Array(segments);
+	for (let i=0; i<segments; ++i) {
+		const rad = dRad*i;
+		vX[i] = Math.cos(rad)*radius;
+		vY[i] = Math.sin(rad)*radius;
+	}
+};
+
 let createCubeGeometry = size => {
 	let geometry = new Geometry();
 	let n = 0;
 	let vA = [];
 	let vE = [];
-	let addFace = (x, y, z) => {
+	let addFace = (x, y, z, row, col) => {
 		let m = vec4(x, y, z, 1).toEulerRotation();
 		let normal = m.mul(vec4(0, 0, -1, 1));
 		let s = size*0.5;
@@ -59,8 +70,8 @@ let createCubeGeometry = size => {
 			vec4( 1,  1, -1, 1),
 			vec4(-1,  1, -1, 1),
 		].forEach(p => {
-			let uv_x = (p.x + 1)*0.5;
-			let uv_y = (p.y + 1)*0.5;
+			let uv_x = (p.x + 1)*0.5*(1/3) + col*(1/3);
+			let uv_y = (p.y + 1)*0.5*(1/4) + row*(1/4);
 			p = m.mul(p);
 			p = vec4(p);
 			vA.push(p.x*s, p.y*s, p.z*s);
@@ -73,20 +84,23 @@ let createCubeGeometry = size => {
 		});
 		n += 4;
 	};
-	addFace(0, 0, 0);
-	addFace(Math.PI*1.5, 0, 0);
-	addFace(Math.PI, 0, 0);
-	addFace(Math.PI*0.5, 0, 0);
-	addFace(0, Math.PI*0.5, 0);
-	addFace(0, Math.PI*1.5, 0);
+	addFace(0, 0, 0,           2, 1);
+	addFace(Math.PI*1.5, 0, 0, 3, 1);
+	addFace(Math.PI, 0, 0,     0, 1);
+	addFace(Math.PI*0.5, 0, 0, 1, 1);
+	addFace(0, Math.PI*0.5, 0, 2, 2);
+	addFace(0, Math.PI*1.5, 0, 2, 0);
 	geometry.attrArray = new Float32Array(vA);
 	geometry.element = new Int8Array(vE);
 	return geometry;
 };
 
 let render = _ => {
+	let r = new Date() * 0.001;
+	r = r%(Math.PI*2);
 	ctx.clear();
-	for (let i=0; i<8; ++i) {
+	vMsh[0].transform = vec3(0, r, 0).toEulerRotation();
+	for (let i=0; i<vMsh.length; ++i) {
 		let item = vMsh[i];
 		if (item) {
 			ctx.renderMesh(item, camera);
@@ -94,51 +108,47 @@ let render = _ => {
 	}
 };
 
-let program;
-let material;
-let camera;
 let ctx;
-let vShader;
-let fShader;
-let texture;
-let vMsh = new Array(8);
-let vTex = new Array(8);
-let vMat = new Array(8);
+let program, material, camera;
+let vShader, fShader;
+let vMsh = new Array(1);
+let vTex = new Array(1);
+let vMat = new Array(1);
 
-let nAsyncCalls = 11;
+let nAsyncCalls = 3 + vTex.length;
 let ready = _ => {
+	mTemp = vec3(0, -6, 7).toTranslation();
+	mTemp = vec3(0.7, 0, 0).toEulerRotation().mul(mTemp);
 	program = new Program(vShader, fShader);
 	material = new Material(program);
-	for (let i=0; i<8; ++i) {
-		let mat = new Material(program);
-		mat.addTexture(vTex[i]);
-		let cub = new Mesh(createCubeGeometry(2), mat);
-		let vec = toVec3[i].mul(vec3(4, 4, 4));
-		cub.translate(vec);
-		vMsh[i] = cub;
+	vMsh[0] = new Mesh(createCubeGeometry(1), material);
+	let mat = new Material(program);
+	for (let i=0; i<vTex.length; ++i) {
+		material.addTexture(vTex[i]);
 	}
 	ctx = new WebGL2Context();
 	ctx.bindCanvas(document.querySelector("canvas"));
 	camera = new Camera(0.4, ctx.size_x/ctx.size_y, 1, 100);
-	camera.lookAt(2, 2, 2);
+	camera.translate(0, 2, -10);
+	camera.localRotate(-0.1, 0, 0);
 	setInterval(render, 0);
 };
+
 let asyncCallFinish = _ => {
 	if (--nAsyncCalls === 0) {
 		ready();
 	}
 };
 
-window.addEventListener("load", _ => {
-	asyncCallFinish();
-});
+window.addEventListener("load", asyncCallFinish);
 
-for (let i=0; i<8; ++i) {
-	loadImg("img/" + toBinStr[i] + ".png", img => {
+for (let i=0; i<vTex.length; ++i) {
+	loadImg("img/temp.png", img => {
 		vTex[i] = new Texture(img);
 		asyncCallFinish();
 	});
 }
+
 
 loadShader("shaders/vertex.glsl", "vertex", shader => {
 	vShader = shader;
