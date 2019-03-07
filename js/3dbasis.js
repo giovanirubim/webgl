@@ -205,20 +205,32 @@ class Mat {
 		throw new Error();
 	}
 
-	inversed() {
-		if (this.nRows !== this.nCols) {
-			throw new Error();
+	length() {
+		const {array, size} = this;
+		const res = new Mat(this.nRows, this.nCols, this.array.slice());
+		const dst = res.array;
+		let t = 0;
+		for (let i=0; i<size; ++i) {
+			const x = dst[i];
+			t += x*x;
 		}
-		const n = this.nRows;
-		const res = new Mat(n, n, this.array.slice());
-		const a = res.array;
-		const delta = n + 1;
-		for (let p=0; p<n; ++p) {
-			let pivot = a[p];
-			if (pivot === 0) {
-				throw new Error();
-			}
+		return Math.sqrt(t);
+	}
+
+	normalized() {
+		const {array, size} = this;
+		const res = new Mat(this.nRows, this.nCols, this.array.slice());
+		const dst = res.array;
+		let t = 0;
+		for (let i=0; i<size; ++i) {
+			const x = dst[i];
+			t += x*x;
 		}
+		t = 1/Math.sqrt(t);
+		for (let i=0; i<size; ++i) {
+			dst[i] *= t;
+		}
+		return res;
 	}
 
 	transposed() {
@@ -320,12 +332,22 @@ class Mat {
 
 	toTranslation() {
 		const {x, y, z} = this;
-		return new Mat(4, 4, new Float32Array([
+		return new Mat(4, 4, [
 			1, 0, 0, x,
 			0, 1, 0, y,
 			0, 0, 1, z,
 			0, 0, 0, 1,
-		]));
+		]);
+	}
+
+	toScale() {
+		const {x, y, z} = this;
+		return new Mat(4, 4, [
+			x, 0, 0, 0,
+			0, y, 0, 0,
+			0, 0, z, 0,
+			0, 0, 0, 1
+		]);
 	}
 
 	set x(val) {

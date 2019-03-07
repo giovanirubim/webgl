@@ -9,12 +9,14 @@ const GL_DEPTH_TEST = WebGL2RenderingContext.DEPTH_TEST;
 const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
 const GL_FLOAT = WebGL2RenderingContext.FLOAT;
 const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
-const GL_LINEAR_MIPMAP_LINEAR = WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
 const GL_LINEAR = WebGL2RenderingContext.LINEAR;
+const GL_LINEAR_MIPMAP_LINEAR = WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
+const GL_MAX_TEX = WebGL2RenderingContext.ACTIVE_TEXTURE - WebGL2RenderingContext.TEXTURE0;
 const GL_NEAREST = WebGL2RenderingContext.NEAREST;
 const GL_REPEAT = WebGL2RenderingContext.REPEAT;
 const GL_RGBA = WebGL2RenderingContext.RGBA;
 const GL_STATIC_DRAW = WebGL2RenderingContext.STATIC_DRAW;
+const GL_TEXTURE0 = WebGL2RenderingContext.TEXTURE0;
 const GL_TEXTURE_2D = WebGL2RenderingContext.TEXTURE_2D;
 const GL_TEXTURE_BASE_LEVEL = WebGL2RenderingContext.TEXTURE_BASE_LEVEL;
 const GL_TEXTURE_MAG_FILTER = WebGL2RenderingContext.TEXTURE_MAG_FILTER;
@@ -82,8 +84,13 @@ class Material {
 		this.uniforms = array;
 		this.textures = [];
 	}
-	addTexture(texture) {
-		this.textures.push(texture);
+	addTexture(texture, uniformName) {
+		let src = texture.img.src.split("/");
+		src = src[src.length - 1];
+		if (uniformName === undefined) {
+			uniformName = "texture_" + (this.textures.length + 1);
+		}
+		this.textures.push({texture, uniformName});
 		return this;
 	}
 }
@@ -106,10 +113,18 @@ class Transformable {
 		return this;
 	}
 	rotate(x, y, z, order) {
+		if (x instanceof Mat) {
+			order = y;
+			[x, y, z] = x.array;
+		}
 		this.transform = vec4(x, y, z, 1).toEulerRotation(order).mul(this.transform);
 		return this;
 	}
 	localRotate(x, y, z, order) {
+		if (x instanceof Mat) {
+			order = y;
+			[x, y, z] = x.array;
+		}
 		let col = this.transform.copy(0, 3, 3, 1);
 		this.rotate(x, y, z, order);
 		this.transform = this.transform.paste(col, 0, 3);
@@ -144,14 +159,17 @@ class Camera extends Transformable {
 			0, 0, 1, 0
 		);
 	}
-	translate(x, y, z) {
-		super.translate(-x, -y, -z);
-		return this;
-	}
-	rotate(x, y, z, order) {
-		order = (order || "").trim() || "XYZ";
-		order = order[2] + order[1] + order[0];
-		super.rotate(-x, -y, -z, order);
+	lookAt(x, y, z) {
+		if (x instanceof Mat) {
+			[x, y, z] = vec.array;
+		}
+		let ax = 0, ay = 0;
+		let l = Math.sqrt(y*y + z*z);
+		ax = y < 0 ? Math.acos(z/l) : Math.PI*2 - Math.acos(z/l);
+		z = z < 0 ? -l : l;
+		l = Math.sqrt(x*x + z*z);
+		ay = x > 0 ? Math.acos(z/l) : Math.PI*2 - Math.acos(z/l);
+		this.transform = vec3(ax, ay, 0).toEulerRotation();
 		return this;
 	}
 }
@@ -223,32 +241,34 @@ class WebGL2Context {
 	bindTexture(texture) {
 		let {gl, texIdToIndex, texIndexToId} = this;
 		const glRef = gl.createTexture();
-		gl.bindTexture(GL_TEXTURE_2D, glRef);
-		const index = this.getTextureIndex(texture);
-		gl.texImage2D(GL_TEXTURE_2D, index, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, texture.img);
+		const id = texture.id;
+		const index = this.activeTexture(id, glRef);
+		let temp = texture.img.src.split("/");
+		temp = temp[temp.length - 1];
+		gl.texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, texture.img);
 		gl.generateMipmap(GL_TEXTURE_2D);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
-		return this.glRefMap[texture.id] = glRef;
+		return this.glRefMap[id] = glRef;
 	}
-	getTextureIndex(texture) {
-		const {texIdToIndex, texIndexToId} = this;
-		const id = texture.id;
+	activeTexture(id, glRef) {
+		const {gl, texIdToIndex, texIndexToId} = this;
 		let index = texIdToIndex[id];
-		if (index !== undefined) {
-			return index;
+		if (index === undefined) {
+			index = this.nextTexIndex ++;
+			this.nextTexIndex %= GL_MAX_TEX;
+			const other = texIndexToId[index];
+			if (other !== undefined) {
+				texIdToIndex[other] = undefined;
+			}
+			texIndexToId[index] = id;
+			texIdToIndex[id] = index;
 		}
-		index = this.nextTexIndex++;
-		this.nextTexIndex &= 15;
-		const other = texIndexToId[index];
-		if (other !== undefined) {
-			texIdToIndex[other] = undefined;
-		}
-		texIndexToId[index] = id;
-		texIdToIndex[id] = index;
+		gl.activeTexture(GL_TEXTURE0 + index);
+		gl.bindTexture(GL_TEXTURE_2D, glRef);
 		return index;
 	}
 	useMaterial(material) {
@@ -260,15 +280,21 @@ class WebGL2Context {
 			gl.useProgram(progGlRef);
 			this.current_program = program;
 		}
+		const map = locationMap[program.id] || (locationMap[program.id] = {});
 		const textures = material.textures;
 		const n = textures.length;
+		let logs = [];
 		for (let i=0; i<n; ++i) {
-			const tex = textures[i];
-			if (glRefMap[tex.id] === undefined) {
-				this.bindTexture(tex);
+			const {texture, uniformName} = textures[i];
+			let glRef = glRefMap[texture.id];
+			if (glRef === undefined) {
+				glRef = this.bindTexture(texture);
 			}
+			let location = map[name] || (map[name] = gl.getUniformLocation(progGlRef, uniformName));
+			const index = this.activeTexture(texture.id, glRef);
+			logs.push(uniformName + " is " + index);
+			gl.uniform1i(location, index);
 		}
-		const map = locationMap[program.id] || (locationMap[program.id] = {});
 		for (let a=material.uniforms, i=a.length; i;) {
 			let {name, type, value} = a[--i];
 			let location = map[name] || (map[name] = gl.getUniformLocation(progGlRef, name));

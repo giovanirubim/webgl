@@ -86,17 +86,22 @@ let createCubeGeometry = size => {
 
 let render = _ => {
 	ctx.clear();
-	ctx.renderMesh(cube, camera);
+	for (let i=0; i<8; ++i) {
+		let item = vMsh[i];
+		if (item) {
+			ctx.renderMesh(item, camera);
+		}
+	}
 };
 
 let program;
 let material;
-let cube;
 let camera;
 let ctx;
 let vShader;
 let fShader;
 let texture;
+let vMsh = new Array(8);
 let vTex = new Array(8);
 let vMat = new Array(8);
 
@@ -104,14 +109,19 @@ let nAsyncCalls = 11;
 let ready = _ => {
 	program = new Program(vShader, fShader);
 	material = new Material(program);
-	material.addTexture(vTex[0]);
-	cube = new Mesh(createCubeGeometry(4), material);
-	cube.translate(0, 0, 8);
-	camera = new Camera(0.4, 16/9, 1, 100);
+	for (let i=0; i<8; ++i) {
+		let mat = new Material(program);
+		mat.addTexture(vTex[i]);
+		let cub = new Mesh(createCubeGeometry(2), mat);
+		let vec = toVec3[i].mul(vec3(4, 4, 4));
+		cub.translate(vec);
+		vMsh[i] = cub;
+	}
 	ctx = new WebGL2Context();
 	ctx.bindCanvas(document.querySelector("canvas"));
-	setInterval(render, 10);
-	render();
+	camera = new Camera(0.4, ctx.size_x/ctx.size_y, 1, 100);
+	camera.lookAt(2, 2, 2);
+	setInterval(render, 0);
 };
 let asyncCallFinish = _ => {
 	if (--nAsyncCalls === 0) {
@@ -121,41 +131,6 @@ let asyncCallFinish = _ => {
 
 window.addEventListener("load", _ => {
 	asyncCallFinish();
-	let start = null;
-	let canvas = document.querySelector("canvas");
-	let handleMousedown = (x, y) => {
-		start = {x, y, m: cube.transform};
-	};
-	let handleMouseup = (x, y) => {
-		start = null;
-	};
-	let handleMousemove = (x, y) => {
-		if (start) {
-			let m = start.m;
-			let dx = x - start.x;
-			let dy = y - start.y;
-			let r = vec4(dy*0.005, dx*0.005, 0, 0);
-			let col = m.copy(0, 3, 3, 1);
-			cube.transform = r.toEulerRotation().mul(m);
-			cube.transform = cube.transform.paste(col, 0, 3);
-		}
-	};
-	canvas.addEventListener("mousedown", e => {
-		handleMousedown(e.offsetX, e.offsetY);
-	});
-	canvas.addEventListener("mouseup", e => {
-		handleMouseup(e.offsetX, e.offsetY);
-		start = null;
-	});
-	canvas.addEventListener("mousemove", e => {
-		if (start && !(e.buttons & 1)) {
-			handleMouseup(e.offsetX, e.offsetY);
-		}
-		handleMousemove(e.offsetX, e.offsetY);
-	});
-	canvas.addEventListener("wheel", e => {
-		cube.localRotate(0, 0, e.deltaY*0.001);
-	});
 });
 
 for (let i=0; i<8; ++i) {
