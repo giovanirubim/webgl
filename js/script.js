@@ -43,35 +43,61 @@ let loadShader = (src, type, handler) => {
 	xhttp.send();
 };
 
-let createCylinderGeometry = (radius, width, segments) => {
-	const dRad = Math.PI*2/segments;
-	const vX = new Array(segments);
-	const vY = new Array(segments);
-	for (let i=0; i<segments; ++i) {
+let createCylinderGeometry = (radius, width, nSegments) => {
+	const dRad = Math.PI*2/nSegments;
+	const z1 = width*0.5;
+	const z0 = - z1;
+	const vE = [];
+	const vA = [];
+	const colorMax = 0.8;
+	const colorMin = 0.2;
+	const f = x => (x + 1)*0.5*(colorMax - colorMin) + colorMin;
+	const addPoint = (dx, dy) => {
+		let x = dx*radius;
+		let y = dy*radius;
+		vA.push(x, y, z0, f(dx), f(dy), f(-1), 0, 0, 0, 0, 0);
+		vA.push(x, y, z1, f(dx), f(dy), f(+1), 0, 0, 0, 0, 0);
+	};
+	for (let i=0; i<nSegments; ++i) {
 		const rad = dRad*i;
-		vX[i] = Math.cos(rad)*radius;
-		vY[i] = Math.sin(rad)*radius;
+		addPoint(Math.cos(rad), Math.sin(rad));
 	}
+	addPoint(0, 0);
+	const p1 = nSegments*2;
+	const p2 = p1 + 1;
+	for (let i=0; i<nSegments; ++i) {
+		let a = (i + i);
+		let b = (a + 1);
+		let c = (a + 2)%(nSegments*2);
+		let d = (a + 3)%(nSegments*2);
+		vE.push(a, b, c, b, c, d);
+		vE.push(a, c, p1);
+		vE.push(b, d, p2);
+	}
+	const geometry = new Geometry();
+	geometry.attrArray = new Float32Array(vA);
+	geometry.element = new Uint8Array(vE);
+	return geometry;
 };
 
 let createCubeGeometry = size => {
-	let geometry = new Geometry();
+	const geometry = new Geometry();
+	const vA = [];
+	const vE = [];
 	let n = 0;
-	let vA = [];
-	let vE = [];
 	let addFace = (x, y, z, row, col) => {
-		let m = vec4(x, y, z, 1).toEulerRotation();
-		let normal = m.mul(vec4(0, 0, -1, 1));
-		let s = size*0.5;
-		let a = 0.3, b = 0.5;
+		const m = vec4(x, y, z, 1).toEulerRotation();
+		const normal = m.mul(vec4(0, 0, -1, 1));
+		const s = size*0.5;
+		const a = 0.3, b = 0.5;
 		[
 			vec4(-1, -1, -1, 1),
 			vec4( 1, -1, -1, 1),
 			vec4( 1,  1, -1, 1),
 			vec4(-1,  1, -1, 1),
 		].forEach(p => {
-			let uv_x = (p.x + 1)*0.5*(1/3) + col*(1/3);
-			let uv_y = (p.y + 1)*0.5*(1/4) + row*(1/4);
+			const uv_x = (p.x + 1)*0.5*(1/3) + col*(1/3);
+			const uv_y = (p.y + 1)*0.5*(1/4) + row*(1/4);
 			p = m.mul(p);
 			p = vec4(p);
 			vA.push(p.x*s, p.y*s, p.z*s);
@@ -91,7 +117,7 @@ let createCubeGeometry = size => {
 	addFace(0, Math.PI*0.5, 0, 2, 2);
 	addFace(0, Math.PI*1.5, 0, 2, 0);
 	geometry.attrArray = new Float32Array(vA);
-	geometry.element = new Int8Array(vE);
+	geometry.element = new Uint8Array(vE);
 	return geometry;
 };
 
@@ -111,9 +137,9 @@ let render = _ => {
 let ctx;
 let program, material, camera;
 let vShader, fShader;
-let vMsh = new Array(1);
-let vTex = new Array(1);
-let vMat = new Array(1);
+const vMsh = new Array(1);
+const vTex = new Array(1);
+const vMat = new Array(1);
 
 let nAsyncCalls = 3 + vTex.length;
 let ready = _ => {
@@ -121,14 +147,14 @@ let ready = _ => {
 	mTemp = vec3(0.7, 0, 0).toEulerRotation().mul(mTemp);
 	program = new Program(vShader, fShader);
 	material = new Material(program);
-	vMsh[0] = new Mesh(createCubeGeometry(1), material);
+	vMsh[0] = new Mesh(createCylinderGeometry(0.5, 6, 120), material);
 	let mat = new Material(program);
 	for (let i=0; i<vTex.length; ++i) {
 		material.addTexture(vTex[i]);
 	}
 	ctx = new WebGL2Context();
 	ctx.bindCanvas(document.querySelector("canvas"));
-	camera = new Camera(0.4, ctx.size_x/ctx.size_y, 1, 100);
+	camera = new Camera(0.4, ctx.size_x/ctx.size_y, 1, 210);
 	camera.translate(0, 2, -10);
 	camera.localRotate(-0.1, 0, 0);
 	setInterval(render, 0);

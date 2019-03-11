@@ -9,10 +9,12 @@ uniform mat4 view;
 uniform mat4 transform;
 out vec2 vertex_uv;
 out vec3 vertex_normal;
+out vec3 vertex_color;
 out vec3 frag_coord;
 void main() {
 	vertex_uv = vertexUV;
 	vertex_normal = vertexNormal;
+	vertex_color = vertexColor;
 	frag_coord = (transform*vec4(vertexCoord, 1.0)).xyz;
 	gl_Position = projection*inverse(view)*vec4(frag_coord, 1.0);
 }
