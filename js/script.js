@@ -52,27 +52,24 @@ let createCylinderGeometry = (radius, width, nSegments) => {
 	const colorMax = 0.8;
 	const colorMin = 0.2;
 	const f = x => (x + 1)*0.5*(colorMax - colorMin) + colorMin;
-	const addPoint = (dx, dy) => {
+	const addPoint = (dx, dy, p) => {
 		let x = dx*radius;
 		let y = dy*radius;
-		vA.push(x, y, z0, f(dx), f(dy), f(-1), 0, 0, 0, 0, 0);
-		vA.push(x, y, z1, f(dx), f(dy), f(+1), 0, 0, 0, 0, 0);
+		vA.push(x, y, z0, f(dx), f(dy), f(-1), 0, p, 0, 0, 0);
+		vA.push(x, y, z1, f(dx), f(dy), f(+1), 1, p, 0, 0, 0);
 	};
-	for (let i=0; i<nSegments; ++i) {
+	for (let i=0; i<=nSegments; ++i) {
 		const rad = dRad*i;
-		addPoint(Math.cos(rad), Math.sin(rad));
+		addPoint(Math.cos(rad), Math.sin(rad), i/nSegments);
 	}
-	addPoint(0, 0);
 	const p1 = nSegments*2;
 	const p2 = p1 + 1;
 	for (let i=0; i<nSegments; ++i) {
-		let a = (i + i);
-		let b = (a + 1);
-		let c = (a + 2)%(nSegments*2);
-		let d = (a + 3)%(nSegments*2);
+		let a = i + i;
+		let b = a + 1;
+		let c = a + 2;
+		let d = a + 3;
 		vE.push(a, b, c, b, c, d);
-		vE.push(a, c, p1);
-		vE.push(b, d, p2);
 	}
 	const geometry = new Geometry();
 	geometry.attrArray = new Float32Array(vA);
@@ -89,7 +86,7 @@ let createCubeGeometry = size => {
 		const m = vec4(x, y, z, 1).toEulerRotation();
 		const normal = m.mul(vec4(0, 0, -1, 1));
 		const s = size*0.5;
-		const a = 0.3, b = 0.5;
+		const a = 0.5, b = 0.5;
 		[
 			vec4(-1, -1, -1, 1),
 			vec4( 1, -1, -1, 1),
@@ -101,7 +98,8 @@ let createCubeGeometry = size => {
 			p = m.mul(p);
 			p = vec4(p);
 			vA.push(p.x*s, p.y*s, p.z*s);
-			vA.push(p.x*a + b, p.y*a + b, p.z*a + b);
+			// vA.push(p.x*a + b, p.y*a + b, p.z*a + b);
+			vA.push(0.5, 0.5, 0.5);
 			vA.push(uv_x, uv_y);
 			vA.push(normal.x, normal.y, normal.z);
 		});
@@ -147,7 +145,7 @@ let ready = _ => {
 	mTemp = vec3(0.7, 0, 0).toEulerRotation().mul(mTemp);
 	program = new Program(vShader, fShader);
 	material = new Material(program);
-	vMsh[0] = new Mesh(createCylinderGeometry(0.5, 6, 120), material);
+	vMsh[0] = new Mesh(createCubeGeometry(2), material);
 	let mat = new Material(program);
 	for (let i=0; i<vTex.length; ++i) {
 		material.addTexture(vTex[i]);
@@ -169,7 +167,7 @@ let asyncCallFinish = _ => {
 window.addEventListener("load", asyncCallFinish);
 
 for (let i=0; i<vTex.length; ++i) {
-	loadImg("img/temp.png", img => {
+	loadImg("img/tex3.png", img => {
 		vTex[i] = new Texture(img);
 		asyncCallFinish();
 	});

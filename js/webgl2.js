@@ -95,7 +95,6 @@ class Material {
 		if (uniformName === undefined) {
 			uniformName = "texture_" + (this.textures.length + 1);
 		}
-		console.log("Adicionando textura " + getSrc(texture.img));
 		this.textures.push({texture, uniformName});
 		return this;
 	}
@@ -264,7 +263,6 @@ class WebGL2Context {
 		}
 		gl.activeTexture(GL_TEXTURE0 + index);
 		if (!binded) {
-			console.log("Binded");
 			gl.bindTexture(GL_TEXTURE_2D, glRef);
 		}
 		return index;
