@@ -9,6 +9,10 @@ const GL_DEPTH_TEST = WebGL2RenderingContext.DEPTH_TEST;
 const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
 const GL_FLOAT = WebGL2RenderingContext.FLOAT;
 const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
+const GL_LINE_STRIP = WebGL2RenderingContext.LINE_STRIP;
+const GL_LINES = WebGL2RenderingContext.LINES;
+const GL_FRONT = WebGL2RenderingContext.FRONT;
+const GL_LINE = WebGL2RenderingContext.LINE;
 const GL_LINEAR = WebGL2RenderingContext.LINEAR;
 const GL_LINEAR_MIPMAP_LINEAR = WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
 const GL_MAX_TEX = WebGL2RenderingContext.ACTIVE_TEXTURE - WebGL2RenderingContext.TEXTURE0;
@@ -26,10 +30,11 @@ const GL_TEXTURE_WRAP_S = WebGL2RenderingContext.TEXTURE_WRAP_S;
 const GL_TRIANGLES = WebGL2RenderingContext.TRIANGLES;
 const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
+const GL_UNSIGNED_SHORT = WebGL2RenderingContext.UNSIGNED_SHORT;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
 
 getSrc = img => {
-	let array = img.src.split("/");
+	const array = img.src.split("/");
 	return array[array.length - 1];
 };
 
@@ -47,8 +52,8 @@ class Shader {
 			this.enumType = GL_FRAGMENT_SHADER;
 		}
 	}
-	get type() {
-		if (this.enumType === GL_VERTEX_SHADER) {
+	get type() 
+{		if (this.enumType === GL_VERTEX_SHADER) {
 			return "vertex";
 		} else if (this.enumType === GL_FRAGMENT_SHADER) {
 			return "fragment";
@@ -65,9 +70,9 @@ class Program {
 class Material {
 	constructor(program, uniforms) {
 		this.program = program;
-		let array = [];
+		const array = [];
 		for (let name in uniforms) {
-			let obj = uniforms[name];
+			const obj = uniforms[name];
 			let value = obj.value;
 			let type = obj.type;
 			if (type === undefined) {
@@ -130,7 +135,7 @@ class Transformable {
 			order = y;
 			[x, y, z] = x.array;
 		}
-		let col = this.transform.copy(0, 3, 3, 1);
+		const col = this.transform.copy(0, 3, 3, 1);
 		this.rotate(x, y, z, order);
 		this.transform = this.transform.paste(col, 0, 3);
 		return this;
@@ -154,9 +159,9 @@ class Mesh extends Transformable {
 class Camera extends Transformable {
 	constructor(angle, ratio, n, f) {
 		super();
-		let h = 2*n*Math.tan(angle);
-		let w = ratio*h;
-		let N = 2*n;
+		const h = 2*n*Math.tan(angle);
+		const w = ratio*h;
+		const N = 2*n;
 		this.projection = mat4(
 			N/w, 0, 0, 0,
 			0, N/h, 0, 0,
@@ -191,14 +196,14 @@ class WebGL2Context {
 		const glRef = gl.createShader(shader.enumType);
 		gl.shaderSource(glRef, shader.source);
 		gl.compileShader(glRef);
-		let info = gl.getShaderInfoLog(glRef);
+		const info = gl.getShaderInfoLog(glRef);
 		if (info) {
 			throw new Error(info);
 		}
 		return this.glRefMap[shader.id] = glRef;
 	}
 	bindProgram(program) {
-		let {gl, glRefMap} = this;
+		const {gl, glRefMap} = this;
 		const glRef = gl.createProgram();
 		let {vShader, fShader} = program;
 		vShader = glRefMap[vShader.id] || this.compileShader(vShader);
@@ -210,14 +215,14 @@ class WebGL2Context {
 	}
 	bindGeometry(geometry) {
 		const gl = this.gl;
-		let vao = gl.createVertexArray();
-		let vbo = gl.createBuffer();
-		let ebo = gl.createBuffer();
-		let bpe = geometry.attrArray.BYTES_PER_ELEMENT;
+		const vao = gl.createVertexArray();
+		const vbo = gl.createBuffer();
+		const ebo = gl.createBuffer();
+		const bpe = geometry.attrArray.BYTES_PER_ELEMENT;
 		gl.bindVertexArray(vao);
 		gl.bindBuffer(GL_ARRAY_BUFFER, vbo);
 		gl.bufferData(GL_ARRAY_BUFFER, geometry.attrArray, GL_STATIC_DRAW);
-		let stride = bpe*11;
+		const stride = bpe*11;
 		gl.vertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
 		gl.vertexAttribPointer(1, 3, GL_FLOAT, false, stride, bpe*3);
 		gl.vertexAttribPointer(2, 2, GL_FLOAT, false, stride, bpe*6);
@@ -231,7 +236,7 @@ class WebGL2Context {
 		return this.glRefMap[geometry.id] = vao;
 	}
 	bindTexture(texture) {
-		let {gl, texIdToIndex, texIndexToId} = this;
+		const {gl, texIdToIndex, texIndexToId} = this;
 		const glRef = gl.createTexture();
 		const id = texture.id;
 		const index = this.activeTexture(id, glRef);
@@ -268,10 +273,10 @@ class WebGL2Context {
 		return index;
 	}
 	useMaterial(material) {
-		let {gl, current_program, current_material_id, glRefMap, locationMap} = this;
+		const {gl, current_program, current_material_id, glRefMap, locationMap} = this;
 		if (material.id === current_material_id) return;
-		let program = material.program;
-		let progGlRef = glRefMap[program.id] || this.bindProgram(program);
+		const program = material.program;
+		const progGlRef = glRefMap[program.id] || this.bindProgram(program);
 		if (program !== current_program) {
 			gl.useProgram(progGlRef);
 			this.current_program = program;
@@ -336,15 +341,20 @@ class WebGL2Context {
 		return this;
 	}
 	renderMesh(mesh, camera) {
-		let {gl, glRefMap} = this;
-		let {geometry, material} = mesh;
-		let map = this.useMaterial(material);
+		const {gl, glRefMap} = this;
+		const {geometry, material} = mesh;
+		const map = this.useMaterial(material);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.array);
 		gl.uniformMatrix4fv(map.view, true, camera.transform.array);
 		gl.uniformMatrix4fv(map.projection, true, camera.projection.array);
-		let vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
+		const vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);
-		gl.drawElements(GL_TRIANGLES, geometry.element.length, GL_UNSIGNED_BYTE, 0);
+		const element = geometry.element;
+		if (element instanceof Uint8Array) {
+			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_BYTE, 0);
+		} else if (element instanceof Uint16Array) {
+			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_SHORT, 0);
+		}
 		return this;
 	}
 }
