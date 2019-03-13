@@ -21,3 +21,5 @@ void main() {
 	eye_coord = view[3].xyz;
 	gl_Position = projection*inverse(view)*coord;
 }
+
+/* @vertex */

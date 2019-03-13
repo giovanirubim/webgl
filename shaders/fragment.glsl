@@ -37,3 +37,5 @@ void main() {
 	FragColor = vec4(total_light, 1.0)*texture(texture_1, frag_uv);
 
 }
+
+/* @fragment */

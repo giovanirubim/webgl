@@ -9,12 +9,12 @@ const GL_DEPTH_TEST = WebGL2RenderingContext.DEPTH_TEST;
 const GL_ELEMENT_ARRAY_BUFFER = WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER;
 const GL_FLOAT = WebGL2RenderingContext.FLOAT;
 const GL_FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
-const GL_LINE_STRIP = WebGL2RenderingContext.LINE_STRIP;
-const GL_LINES = WebGL2RenderingContext.LINES;
 const GL_FRONT = WebGL2RenderingContext.FRONT;
 const GL_LINE = WebGL2RenderingContext.LINE;
+const GL_LINE_STRIP = WebGL2RenderingContext.LINE_STRIP;
 const GL_LINEAR = WebGL2RenderingContext.LINEAR;
 const GL_LINEAR_MIPMAP_LINEAR = WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
+const GL_LINES = WebGL2RenderingContext.LINES;
 const GL_MAX_TEX = WebGL2RenderingContext.ACTIVE_TEXTURE - WebGL2RenderingContext.TEXTURE0;
 const GL_NEAREST = WebGL2RenderingContext.NEAREST;
 const GL_REPEAT = WebGL2RenderingContext.REPEAT;
@@ -41,7 +41,7 @@ getSrc = img => {
 class Shader {
 	constructor() {
 		this.id = Symbol();
-		this.source = "";
+		this.src = "";
 		this.enumType = null;
 	}
 	set type(value) {
@@ -52,8 +52,8 @@ class Shader {
 			this.enumType = GL_FRAGMENT_SHADER;
 		}
 	}
-	get type() 
-{		if (this.enumType === GL_VERTEX_SHADER) {
+	get type() {
+		if (this.enumType === GL_VERTEX_SHADER) {
 			return "vertex";
 		} else if (this.enumType === GL_FRAGMENT_SHADER) {
 			return "fragment";
@@ -157,17 +157,27 @@ class Mesh extends Transformable {
 	}
 }
 class Camera extends Transformable {
-	constructor(angle, ratio, n, f) {
+	constructor(angle, ratio, near, far) {
 		super();
-		const h = 2*n*Math.tan(angle);
-		const w = ratio*h;
-		const N = 2*n;
-		this.projection = mat4(
-			N/w, 0, 0, 0,
-			0, N/h, 0, 0,
-			0, 0, (f+n)/(f-n), N*f/(n-f),
-			0, 0, 1, 0
-		);
+		this.projection = mat4();
+		this.a = angle;
+		this.r = ratio;
+		this.n = near;
+		this.f = far;
+		calc();
+	}
+	calc() {
+		const array = this.projection.array;
+		const {a, r, n, f} = this;
+		const h = 2*n*Math.tan(a);
+		const w = r*h;
+		const b = 2*n;
+		const c = 1/(f-n);
+		array[0]  = b/w;
+		array[5]  = b/h;
+		array[10] = (f+n)*c;
+		array[11] = b*f*c;
+		array[14] = 1;
 	}
 }
 class Texture {
@@ -194,7 +204,7 @@ class WebGL2Context {
 	compileShader(shader) {
 		const gl = this.gl;
 		const glRef = gl.createShader(shader.enumType);
-		gl.shaderSource(glRef, shader.source);
+		gl.shaderSource(glRef, shader.src);
 		gl.compileShader(glRef);
 		const info = gl.getShaderInfoLog(glRef);
 		if (info) {
@@ -351,9 +361,9 @@ class WebGL2Context {
 		gl.bindVertexArray(vao);
 		const element = geometry.element;
 		if (element instanceof Uint8Array) {
-			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_BYTE, 0);
+			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_BYTE, 0);
 		} else if (element instanceof Uint16Array) {
-			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_SHORT, 0);
+			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_SHORT, 0);
 		}
 		return this;
 	}
