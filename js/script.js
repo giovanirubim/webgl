@@ -78,5 +78,6 @@ window.addEventListener("load", function(){
 	], shaders => {
 		const program = new Program(shaders[0], shaders[1]);
 		cube = new Mesh(cubeGeometry(), new Material(program));
+		const camera = new Camera();
 	});
 });
