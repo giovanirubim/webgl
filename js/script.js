@@ -104,13 +104,12 @@ window.addEventListener("load", function(){
 		fShader.type = "fragment";
 	});
 	let camera = new Camera();
-	ctx.clear();
 	sync = _ => {
-		// ctx.clear();
+		ctx.clear();
 		let program = new Program(vShader, fShader);
 		let material = new Material(program);
 		let mesh = new Mesh(sphereGeometry(8, 8), material);
+		mesh.translate(0, 0, 50);
 		ctx.renderMesh(mesh, camera);
-		console.log("gl.getError(): " + ctx.gl.getError());
 	};
 });

@@ -19,8 +19,7 @@ void main() {
 	frag_normal = (transform*vec4(vertexNormal, 1.0)).xyz;
 	frag_color = vertexColor;
 	eye_coord = view[3].xyz;
-	// gl_Position = projection*inverse(view)*coord;
-	gl_Position = coord;
+	gl_Position = projection*inverse(view)*coord;
 }
 
 /* @vertex */

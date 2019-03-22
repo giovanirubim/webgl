@@ -32,7 +32,7 @@ const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
 const GL_UNSIGNED_SHORT = WebGL2RenderingContext.UNSIGNED_SHORT;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
-const GL_LOG = true;
+const GL_LOG = false;
 
 function log() {
 	if (GL_LOG) {
@@ -364,11 +364,9 @@ class WebGL2Context {
 		if (map.projection === undefined) {
 			map.projection = gl.getUniformLocation(progGlRef, "projection");
 		}
-		log("Current material: ", material);
 		return map;
 	}
 	bindCanvas(canvas) {
-		log("Binding the canvas")
 		this.start_x = 0;
 		this.start_y = 0;
 		this.size_x = canvas.width;
@@ -381,7 +379,7 @@ class WebGL2Context {
 		return this;
 	}
 	clear() {
-		log("Cleaning the canvas");
+		log("Clearing canvas");
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
@@ -389,17 +387,12 @@ class WebGL2Context {
 		const {gl, glRefMap} = this;
 		const {geometry, material} = mesh;
 		const map = this.useMaterial(material);
-		// console.log(map);
-		// console.log("gl.getError(): " + map);
-
-		// console.log(map);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.array);
 		gl.uniformMatrix4fv(map.view, true, camera.transform.array);
 		gl.uniformMatrix4fv(map.projection, true, camera.projection.array);
 		const vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);
 		const element = geometry.element;
-		log("Rendering the mesh")
 		if (element instanceof Uint8Array) {
 			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_BYTE, 0);
 		} else if (element instanceof Uint16Array) {
