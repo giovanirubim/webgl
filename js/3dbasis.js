@@ -36,6 +36,9 @@ class Mat {
 	}
 
 	place(args) {
+		if (args.length === 0) {
+			return this;
+		}
 		if (args.length === 1 && typeof args[0] === "number") {
 			this.array.fill(args[0]);
 			return this;

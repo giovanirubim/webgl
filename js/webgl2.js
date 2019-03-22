@@ -32,6 +32,13 @@ const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
 const GL_UNSIGNED_SHORT = WebGL2RenderingContext.UNSIGNED_SHORT;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
+const GL_LOG = true;
+
+function log() {
+	if (GL_LOG) {
+		console.log(...arguments);
+	}
+}
 
 getSrc = img => {
 	const array = img.src.split("/");
@@ -45,7 +52,7 @@ class Shader {
 		this.enumType = null;
 	}
 	set type(value) {
-		value = value.toString().toLowerCase();
+		value = value.toString().trim().toLowerCase();
 		if (value === "vertex") {
 			this.enumType = GL_VERTEX_SHADER;
 		} else if (value === "frag" || value === "fragment") {
@@ -63,36 +70,54 @@ class Shader {
 class Program {
 	constructor(vShader, fShader) {
 		this.id = Symbol();
-		this.vShader = vShader;
-		this.fShader = fShader;
+		this.vShader = null;
+		this.fShader = null;
+		if (vShader) {
+			this.addShader(vShader);
+		}
+		if (fShader) {
+			this.addShader(fShader);
+		}
+	}
+	addShader(shader) {
+		if (shader.enumType === GL_VERTEX_SHADER) {
+			this.vShader = shader;
+		} else if (shader.enumType === GL_FRAGMENT_SHADER) {
+			this.fShader = shader;
+		} else {
+			throw new Error("Untyped shader");
+		}
+		return this;
 	}
 }
 class Material {
 	constructor(program, uniforms) {
 		this.program = program;
-		const array = [];
+		this.uniforms = [];
 		for (let name in uniforms) {
-			const obj = uniforms[name];
-			let value = obj.value;
-			let type = obj.type;
-			if (type === undefined) {
-				if (value instanceof Mat) {
-					if (value.nCols === 1) {
-						type = UNIFORM_FLOAT | 4;
-					} else {
-						type = UNIFORM_MAT | 4;
-					}
-					value = value.array;
-				} else if (Number.isInteger(value)) {
-					type = UNIFORM_INT | 1;
-				} else {
-					type = UNIFORM_FLOAT | 1;
-				}
-			}
-			array.push({name, type, value});
+			this.addUniform(name, uniforms[name]);
 		}
-		this.uniforms = array;
 		this.textures = [];
+	}
+	addUniform(name, uniform) {
+		let value = uniform.value;
+		let type = uniform.type;
+		if (type === undefined) {
+			if (value instanceof Mat) {
+				if (value.nCols === 1) {
+					type = UNIFORM_FLOAT | 4;
+				} else {
+					type = UNIFORM_MAT | 4;
+				}
+				value = value.array;
+			} else if (Number.isInteger(value)) {
+				type = UNIFORM_INT | 1;
+			} else {
+				type = UNIFORM_FLOAT | 1;
+			}
+		}
+		this.uniforms.push({name, type, value});
+		return this;
 	}
 	addTexture(texture, uniformName) {
 		let src = texture.img.src.split("/");
@@ -164,7 +189,7 @@ class Camera extends Transformable {
 		this.r = ratio;
 		this.n = near;
 		this.f = far;
-		calc();
+		this.calc();
 	}
 	calc() {
 		const array = this.projection.array;
@@ -202,6 +227,7 @@ class WebGL2Context {
 		this.nextTexIndex = 0;
 	}
 	compileShader(shader) {
+		log("Compiling shader", shader);
 		const gl = this.gl;
 		const glRef = gl.createShader(shader.enumType);
 		gl.shaderSource(glRef, shader.src);
@@ -210,9 +236,11 @@ class WebGL2Context {
 		if (info) {
 			throw new Error(info);
 		}
+		log("Shader compiled");
 		return this.glRefMap[shader.id] = glRef;
 	}
 	bindProgram(program) {
+		log("Binding program ", program);
 		const {gl, glRefMap} = this;
 		const glRef = gl.createProgram();
 		let {vShader, fShader} = program;
@@ -224,6 +252,7 @@ class WebGL2Context {
 		return this.glRefMap[program.id] = glRef;
 	}
 	bindGeometry(geometry) {
+		log("Binding geometry ", geometry);
 		const gl = this.gl;
 		const vao = gl.createVertexArray();
 		const vbo = gl.createBuffer();
@@ -246,6 +275,7 @@ class WebGL2Context {
 		return this.glRefMap[geometry.id] = vao;
 	}
 	bindTexture(texture) {
+		log("Binding texture ", texture);
 		const {gl, texIdToIndex, texIndexToId} = this;
 		const glRef = gl.createTexture();
 		const id = texture.id;
@@ -284,7 +314,9 @@ class WebGL2Context {
 	}
 	useMaterial(material) {
 		const {gl, current_program, current_material_id, glRefMap, locationMap} = this;
-		if (material.id === current_material_id) return;
+		if (material.id === current_material_id) {
+			return locationMap[program.id];
+		}
 		const program = material.program;
 		const progGlRef = glRefMap[program.id] || this.bindProgram(program);
 		if (program !== current_program) {
@@ -332,9 +364,11 @@ class WebGL2Context {
 		if (map.projection === undefined) {
 			map.projection = gl.getUniformLocation(progGlRef, "projection");
 		}
+		log("Current material: ", material);
 		return map;
 	}
 	bindCanvas(canvas) {
+		log("Binding the canvas")
 		this.start_x = 0;
 		this.start_y = 0;
 		this.size_x = canvas.width;
@@ -342,11 +376,12 @@ class WebGL2Context {
 		const gl = this.gl = canvas.getContext("webgl2");
 		gl.enable(GL_DEPTH_TEST);
 		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
-		gl.clearColor(0, 0, 0, 1);
+		gl.clearColor(1, 0.5, 0, 1);
 		gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
 		return this;
 	}
 	clear() {
+		log("Cleaning the canvas");
 		this.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return this;
 	}
@@ -354,12 +389,17 @@ class WebGL2Context {
 		const {gl, glRefMap} = this;
 		const {geometry, material} = mesh;
 		const map = this.useMaterial(material);
+		// console.log(map);
+		// console.log("gl.getError(): " + map);
+
+		// console.log(map);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.array);
 		gl.uniformMatrix4fv(map.view, true, camera.transform.array);
 		gl.uniformMatrix4fv(map.projection, true, camera.projection.array);
 		const vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);
 		const element = geometry.element;
+		log("Rendering the mesh")
 		if (element instanceof Uint8Array) {
 			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_BYTE, 0);
 		} else if (element instanceof Uint16Array) {
