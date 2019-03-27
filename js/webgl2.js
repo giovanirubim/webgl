@@ -2,6 +2,9 @@ var UNIFORM_INT   = (1 << 3);
 var UNIFORM_FLOAT = (2 << 3);
 var UNIFORM_MAT   = (3 << 3);
 
+var TORAD = Math.PI/180;
+var TODEG = 180/Math.PI;
+
 const GL_ARRAY_BUFFER = WebGL2RenderingContext.ARRAY_BUFFER;
 const GL_COLOR_BUFFER_BIT = WebGL2RenderingContext.COLOR_BUFFER_BIT;
 const GL_DEPTH_BUFFER_BIT = WebGL2RenderingContext.DEPTH_BUFFER_BIT;
@@ -32,7 +35,7 @@ const GL_UNPACK_FLIP_Y_WEBGL = WebGL2RenderingContext.UNPACK_FLIP_Y_WEBGL;
 const GL_UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE;
 const GL_UNSIGNED_SHORT = WebGL2RenderingContext.UNSIGNED_SHORT;
 const GL_VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
-const GL_LOG = false;
+var GL_LOG = false;
 
 function log() {
 	if (GL_LOG) {
@@ -156,13 +159,18 @@ class Transformable {
 		return this;
 	}
 	localRotate(x, y, z, order) {
-		if (x instanceof Mat) {
-			order = y;
-			[x, y, z] = x.array;
-		}
 		const col = this.transform.copy(0, 3, 3, 1);
 		this.rotate(x, y, z, order);
 		this.transform = this.transform.paste(col, 0, 3);
+		return this;
+	}
+	reset() {
+		this.transform = mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		);
 		return this;
 	}
 }
@@ -184,29 +192,45 @@ class Mesh extends Transformable {
 class Camera extends Transformable {
 	constructor(angle, ratio, near, far) {
 		super();
-		this.projection = mat4();
 		this.a = angle;
 		this.r = ratio;
 		this.n = near;
 		this.f = far;
-		this.calc();
+		this.world = mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		);
+		this.projection = null;
+		this.updateProjection();
 	}
-	calc() {
-		const array = this.projection.array;
+	updateProjection() {
 		const {a, r, n, f} = this;
-		const h = 2*n*Math.tan(a);
-		const w = r*h;
-		const b = 2*n;
-		const c = 1/(f-n);
-		array[0]  = b/w;
-		array[5]  = b/h;
-		array[10] = (f+n)*c;
-		array[11] = b*f*c;
-		array[14] = 1;
+		const my = Math.tan(a)*n;
+		const mx = r*my;
+		this.projection = mat4(
+			n/mx, 0, 0, 0,
+			0, n/my, 0, 0,
+			0, 0, (f+n)/(f-n), 2*n*f/(n-f),
+			0, 0, 1, 0
+		);
+		return this;
+	}
+	srcRotate(x, y, z, order) {
+		const m = mat4(this.transform.array);
+		this.reset();
+		this.rotate(x, y, z, order);
+		this.transform = this.transform.mul(m);
+		return this;
+	}
+	updateWorld() {
+		this.world = this.transform.inverted();
+		return this;
 	}
 }
 class Texture {
-	constructor(img, useMipmap) {
+	constructor(img) {
 		this.id = Symbol();
 		this.img = img;
 	}
@@ -358,8 +382,11 @@ class WebGL2Context {
 		if (map.transform === undefined) {
 			map.transform = gl.getUniformLocation(progGlRef, "transform");
 		}
-		if (map.view === undefined) {
-			map.view = gl.getUniformLocation(progGlRef, "view");
+		if (map.camera === undefined) {
+			map.camera = gl.getUniformLocation(progGlRef, "camera");
+		}
+		if (map.world === undefined) {
+			map.world = gl.getUniformLocation(progGlRef, "world");
 		}
 		if (map.projection === undefined) {
 			map.projection = gl.getUniformLocation(progGlRef, "projection");
@@ -374,7 +401,7 @@ class WebGL2Context {
 		const gl = this.gl = canvas.getContext("webgl2");
 		gl.enable(GL_DEPTH_TEST);
 		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
-		gl.clearColor(1, 0.5, 0, 1);
+		gl.clearColor(0.2, 0.2, 0.2, 1);
 		gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
 		return this;
 	}
@@ -388,7 +415,8 @@ class WebGL2Context {
 		const {geometry, material} = mesh;
 		const map = this.useMaterial(material);
 		gl.uniformMatrix4fv(map.transform, true, mesh.transform.array);
-		gl.uniformMatrix4fv(map.view, true, camera.transform.array);
+		gl.uniformMatrix4fv(map.camera, true, camera.transform.array);
+		gl.uniformMatrix4fv(map.world, true, camera.world.array);
 		gl.uniformMatrix4fv(map.projection, true, camera.projection.array);
 		const vao = glRefMap[geometry.id] || this.bindGeometry(geometry);
 		gl.bindVertexArray(vao);

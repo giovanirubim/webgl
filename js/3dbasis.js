@@ -1,52 +1,3 @@
-// function inverseMatrix(src, n, dst, aux) {
-// 	aux = aux || [];
-// 	const l = src.length;
-// 	const d = n + 1;
-// 	for (let i=0; i<l; i++) {
-// 		aux[i] = src[i];
-// 		dst[i] = 0 | (i%d===0);
-// 	}
-// 	for (let i=0, a=0; i<n; i++, a+=n) {
-// 		let b = a + i;
-// 		let c = aux[b];
-// 		if (c === 0) {
-// 			for (let j=b+n; j<l; j+=n) {
-// 				if (aux[j] !== 0) {
-// 					for (let k=a, l=j-i, end=k+n; k<end; ++k, ++l) {
-// 						c = aux[k];
-// 						aux[k] = aux[l];
-// 						aux[l] = c;
-// 						c = dst[k];
-// 						dst[k] = dst[l];
-// 						dst[l] = c;
-// 					}
-// 					break;
-// 				}
-// 			}
-// 			c = aux[b];
-// 			if (c === 0) {
-// 				return false;
-// 			}
-// 		}
-// 		const m = 1/c;
-// 		for (let j=a+n; --j>=a;) {
-// 			aux[j] *= m;
-// 			dst[j] *= m;
-// 		}
-// 		for (let j=0, c=0; j<n; j++, c+=n) {
-// 			if (j === i) {
-// 				continue;
-// 			}
-// 			const d = aux[c + i];
-// 			for (let k=c, j=a, end=k+n; k<end; ++k, ++j) {
-// 				aux[k] -= d*aux[j];
-// 				dst[k] -= d*dst[j];
-// 			}
-// 		}
-// 	}
-// 	return dst;
-// }
-
 class Mat {
 
 	constructor(nRows, nCols, array) {
@@ -84,6 +35,55 @@ class Mat {
 		}
 	}
 
+	static invert(src, n, dst, aux) {
+		aux = aux || [];
+		const l = src.length;
+		const d = n + 1;
+		for (let i=0; i<l; i++) {
+			aux[i] = src[i];
+			dst[i] = 0 | (i%d===0);
+		}
+		for (let i=0, a=0; i<n; i++, a+=n) {
+			let b = a + i;
+			let c = aux[b];
+			if (c === 0) {
+				for (let j=b+n; j<l; j+=n) {
+					if (aux[j] !== 0) {
+						for (let k=a, l=j-i, end=k+n; k<end; ++k, ++l) {
+							c = aux[k];
+							aux[k] = aux[l];
+							aux[l] = c;
+							c = dst[k];
+							dst[k] = dst[l];
+							dst[l] = c;
+						}
+						break;
+					}
+				}
+				c = aux[b];
+				if (c === 0) {
+					return false;
+				}
+			}
+			const m = 1/c;
+			for (let j=a+n; --j>=a;) {
+				aux[j] *= m;
+				dst[j] *= m;
+			}
+			for (let j=0, c=0; j<n; j++, c+=n) {
+				if (j === i) {
+					continue;
+				}
+				const d = aux[c + i];
+				for (let k=c, j=a, end=k+n; k<end; ++k, ++j) {
+					aux[k] -= d*aux[j];
+					dst[k] -= d*dst[j];
+				}
+			}
+		}
+		return dst;
+	}
+	
 	place(args) {
 		if (args.length === 0) {
 			return this;
@@ -292,6 +292,17 @@ class Mat {
 		return res;
 	}
 
+	inverted() {
+		const {nRows, array} = this;
+		const res = new Mat(nRows, nRows);
+		let buffer = this.buffer;
+		if (buffer === undefined) {
+			buffer = this.buffer = new Float32Array(this.size);
+		}
+		Mat.invert(array, nRows, res.array, buffer);
+		return res;
+	}
+
 	transpose() {
 		const {nRows, nCols, array} = this;
 		let buffer = this.buffer;
@@ -388,7 +399,7 @@ class Mat {
 			1, 0, 0, x,
 			0, 1, 0, y,
 			0, 0, 1, z,
-			0, 0, 0, 1,
+			0, 0, 0, 1
 		]);
 	}
 

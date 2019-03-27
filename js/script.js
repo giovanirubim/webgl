@@ -1,6 +1,24 @@
 let sync;
 let nCalls = 0;
-function load(url, callback) {
+function loadImg(url, callback) {
+	++ nCalls;
+	const img = document.createElement("img");
+	img.src = url;
+	setTimeout(_=>{
+		img.onload = _ => {
+			img.remove();
+			if (callback) {
+				callback(img);
+			}
+			if (-- nCalls === 0) {
+				sync();
+			}
+		};
+		img.style.display = "none";
+		document.body.appendChild(img);
+	}, 0);
+}
+function loadText(url, callback) {
 	++ nCalls;
 	const obj = new XMLHttpRequest();
 	obj.onreadystatechange = _ => {
@@ -16,8 +34,27 @@ function load(url, callback) {
 	obj.open("GET", url, true);
 	setTimeout(_=>obj.send(), 0);
 }
+const arrowGeometry = (color, axisIndex) => {
+	const push = (array, stuff) => {
+		if (stuff.array) {
+			return push(array, stuff.array);
+		}
+		if (!stuff || stuff.length === undefined) {
+			return array.push(stuff);
+		}
+		stuff.forEach(e => push(array, e));
+		return array.length;
+	};
+	const attrArray = [];
+	const element = [];
+	const addPoint = coord => {
+		push(attrArray, [coord, color, 0, 0, 0, 0, 0]); // Parei aqui
+	}
+	const addFace = (a, b, c, d) => {
 
-let sphereGeometry = (n1, n2) => {
+	};
+};
+const sphereGeometry = (n1, n2) => {
 	let geometry = new Geometry();
 	let attrArray = [];
 	let element = [];
@@ -93,23 +130,38 @@ window.addEventListener("load", function(){
 	const ctx = new WebGL2Context();
 	ctx.bindCanvas(canvas);
 	let vShader, fShader;
-	load("shaders/vertex.glsl", src => {
+	loadText("shaders/vertex.glsl", src => {
 		vShader = new Shader();
 		vShader.src = src;
 		vShader.type = "vertex";
 	});
-	load("shaders/fragment.glsl", src => {
+	loadText("shaders/fragment.glsl", src => {
 		fShader = new Shader();
 		fShader.src = src;
 		fShader.type = "fragment";
 	});
-	let camera = new Camera();
+	const tex = new Texture();
+	loadImg("img/tex5.png", img => {
+		tex.img = img;
+	});
+	const ratio = canvas.width/canvas.height;
+	let camera = new Camera(45*TORAD, ratio, 1, 100);
+	window.camera = camera;
+	camera.reset();
+	camera.translate(0, 0, -4);
+	camera.rotate(-45*TORAD, 1, 0);
+	camera.updateWorld();
 	sync = _ => {
 		ctx.clear();
 		let program = new Program(vShader, fShader);
 		let material = new Material(program);
-		let mesh = new Mesh(sphereGeometry(8, 8), material);
-		mesh.translate(0, 0, 50);
+		material.addTexture(tex);
+		let mesh = new Mesh(sphereGeometry(32, 64), material);
 		ctx.renderMesh(mesh, camera);
+		const rand = x => x*(Math.random()*2 - 1);
+		setInterval(_=>{
+			ctx.clear();
+			ctx.renderMesh(mesh, camera);
+		}, 10);
 	};
 });

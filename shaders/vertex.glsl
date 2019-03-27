@@ -5,7 +5,8 @@ layout (location = 1) in vec3 vertexColor;
 layout (location = 2) in vec2 vertexUV;
 layout (location = 3) in vec3 vertexNormal;
 uniform mat4 projection;
-uniform mat4 view;
+uniform mat4 camera;
+uniform mat4 world;
 uniform mat4 transform;
 out vec3 frag_coord;
 out vec2 frag_uv;
@@ -18,8 +19,8 @@ void main() {
 	frag_uv = vertexUV;
 	frag_normal = (transform*vec4(vertexNormal, 1.0)).xyz;
 	frag_color = vertexColor;
-	eye_coord = view[3].xyz;
-	gl_Position = projection*inverse(view)*coord;
+	eye_coord = world[3].xyz;
+	gl_Position = projection*world*coord;
 }
 
 /* @vertex */
