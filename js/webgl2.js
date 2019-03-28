@@ -155,7 +155,9 @@ class Transformable {
 			order = y;
 			[x, y, z] = x.array;
 		}
-		this.transform = vec4(x, y, z, 1).toEulerRotation(order).mul(this.transform);
+		const m = vec4(x, y, z, 1).toEulerRotation(order);
+		m.mul(this.transform);
+		this.transform = m;
 		return this;
 	}
 	localRotate(x, y, z, order) {
@@ -217,11 +219,7 @@ class Camera extends Transformable {
 		);
 		return this;
 	}
-	srcRotate(x, y, z, order) {
-		const m = mat4(this.transform.array);
-		this.reset();
-		this.rotate(x, y, z, order);
-		this.transform = this.transform.mul(m);
+	lookToOrigin() {
 		return this;
 	}
 	updateWorld() {

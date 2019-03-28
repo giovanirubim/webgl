@@ -62,7 +62,7 @@ class Mat {
 				}
 				c = aux[b];
 				if (c === 0) {
-					return false;
+					throw new Error("Fail to invert matrix");
 				}
 			}
 			const m = 1/c;
@@ -484,7 +484,28 @@ class Mat {
 	}
 
 	get str() {
-		return this.toString();
+		const {nRows, nCols, array} = this;
+		const col_len = new Array(nCols).fill(0);
+		for (let i=0; i<nRows; ++i) {
+			for (let j=0; j<nCols; ++j) {
+				const len = array[i*nCols + j].toString().length;
+				col_len[j] = Math.max(col_len[j], len);
+			}
+		}
+		let res = "";
+		for (let i=0; i<nRows; ++i) {
+			if (res) {
+				res += ",\n";
+			}
+			for (let j=0; j<nCols; ++j) {
+				if (j) {
+					res += ", ";
+				}
+				const str = array[i*nCols + j].toString();
+				res += " ".repeat(col_len[j] - str.length) + str;
+			}
+		}
+		return res;
 	}
 	get tstr() {
 		return this.transposed().toString();

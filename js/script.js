@@ -149,7 +149,9 @@ window.addEventListener("load", function(){
 	window.camera = camera;
 	camera.reset();
 	camera.translate(0, 0, -4);
-	camera.rotate(-45*TORAD, 1, 0);
+	camera.rotate(-20*TORAD, 22.5*TORAD, 0);
+	// camera.translate(2.3800392150878906, 2.8284270763397217, -1.5282056331634521);
+	// camera.lookToOrigin();
 	camera.updateWorld();
 	sync = _ => {
 		ctx.clear();
