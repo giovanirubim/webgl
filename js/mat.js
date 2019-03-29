@@ -277,24 +277,6 @@ class Mat {
 		return res;
 	}
 
-	mulTo(other, dst) {
-		if (dst === this) {
-			mul(other);
-			return;
-		}
-		const {nRows, nCols, array} = this;
-		if (other === dst) {
-			let buffer = dst.buffer;
-			if (buffer === null) {
-				buffer = dst.buffer = new Float32Array(dst.size);
-			}
-			// AQUI
-			Mat.mul(array, nRows, nCols, other.array, other.nCols, buffer);
-		} else {
-			Mat.mul(array, nRows, nCols, other.array, other.nCols, dst.array);
-		}
-	}
-
 	mul(other) {
 		const {nRows, nCols, array} = this;
 		let buffer = this.buffer;

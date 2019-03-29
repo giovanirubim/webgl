@@ -147,11 +147,11 @@ window.addEventListener("load", function(){
 	const ratio = canvas.width/canvas.height;
 	let camera = new Camera(45*TORAD, ratio, 1, 100);
 	window.camera = camera;
-	camera.reset();
 	camera.translate(0, 0, -4);
 	camera.rotate(-20*TORAD, 22.5*TORAD, 0);
-	// camera.translate(2.3800392150878906, 2.8284270763397217, -1.5282056331634521);
-	// camera.lookToOrigin();
+	camera.reset();
+	camera.translate(1.438419222831726, 1.368080496788025, -3.4726510047912598);
+	camera.lookAt(0, 0, 0);
 	camera.updateWorld();
 	sync = _ => {
 		ctx.clear();
@@ -161,8 +161,11 @@ window.addEventListener("load", function(){
 		let mesh = new Mesh(sphereGeometry(32, 64), material);
 		ctx.renderMesh(mesh, camera);
 		const rand = x => x*(Math.random()*2 - 1);
+		const m = mat4(camera.transform);
+		const start = new Date();
 		setInterval(_=>{
 			ctx.clear();
+			camera.updateWorld();
 			ctx.renderMesh(mesh, camera);
 		}, 10);
 	};
