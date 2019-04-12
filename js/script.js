@@ -187,41 +187,117 @@ const sphereGeometry = (n1, n2) => {
 	return geometry;
 };
 
+function colorToArray(str) {
+	str = str.trim();
+	if (str[0] === "#") {
+		if (str.length === 4) {
+			str = "#" + str[1].repeat(2) + str[2].repeat(2) + str[3].repeat(2);
+		}
+		if (str.length === 7) {
+			r = parseInt(str.substr(1, 2), 16)/255;
+			g = parseInt(str.substr(3, 2), 16)/255;
+			b = parseInt(str.substr(5, 2), 16)/255;
+			return [r, g, b];
+		}
+	}
+}
+
+class cylinderCreator {
+	constructor(nFrags) {
+		this.nFrags = nFrags;
+		this.attrArray = [];
+		this.element = [];
+		this.last_y = null;
+		this.lastRad = null;
+	}
+	moveTo(y, rad) {
+		this.last_y = y;
+		this.lastRad = rad;
+	}
+	extTo(y, rad, r, g, b) {
+		let start = Math.round(this.attrArray.length/11);
+		let n = this.nFrags;
+		let y0 = this.last_y;
+		let y1 = y;
+		let r0 = this.lastRad;
+		let r1 = rad;
+		let add = (x, y, z) => {
+			this.attrArray.push(x, y, z, r, g, b, 0, 0, 0, 0, 0);
+		};
+		let delta = Math.PI*2/n;
+		for (let i=0; i<n; ++i) {
+			let x = Math.cos(i*delta)*r0;
+			let z = Math.sin(i*delta)*r0;
+			add(x, y0, z);
+		}
+		for (let i=0; i<n; ++i) {
+			let x = Math.cos(i*delta)*r1;
+			let z = Math.sin(i*delta)*r1;
+			add(x, y1, z);
+		}
+		for (let i=0; i<n; ++i) {
+			let a = start + i;
+			let b = a + n;
+			let c = start + (i + 1)%n;
+			let d = c + n;
+			this.element.push(a, b, c, b, c, d);
+		}
+	}
+	toGeometry() {
+		let geometry = new Geometry();
+		geometry.attrArray = new Float32Array(this.attrArray);
+		let {element} = this;
+		if (element.length <= (1 << 8)) {
+			element = new Uint8Array(element);
+		} else if (element.length <= (1 << 16)) {
+			element = new Uint16Array(element);
+		} else {
+			element = new Uint32Array(element);
+		}
+		geometry.element = element;
+		return geometry;
+	}
+};
+
 const meshes = [];
 function createMeshes(material) {
-	let f = (r1, r2, h, c, dy) => {
-		let mesh = new Mesh(cylinderGeometry(r1, r2, h, c), material);
-		mesh.translate(0, dy || 0, 0);
-		return mesh;
-	};
-	let v0 = 0.75;
-	let v1 = 0.02;
-	let v2 = 0.3;
-	let v3 = 5.0;
-	let v4 = 0.04;
-	let v5 = 1.5;
-	let c0 = 0.3;
-	let c1 = 0.8;
-	let r1 = 1.00;
-	let r2 = r1 - v1;
-	let r3 = r2 - v2;
-	let r4 = r3 - v1;
-	let r5 = 0.15;
-	let r6 = r5 - v1;
-	let r7 = r6 - v4;
-	let r8 = r7 - v1;
-	let m1 = f(r1, r2, v0, c0, v5);
-	let m2 = f(r2, r3, v0, c1, v5);
-	let m3 = f(r3, r4, v0, c0, v5);
-	let m4 = f(r5, r6, v3, c0);
-	let m5 = f(r6, r7, v3, c1);
-	let m6 = f(r7, r8, v3, c0);
-	meshes.push(m1);
-	meshes.push(m2);
-	meshes.push(m3);
-	meshes.push(m4);
-	meshes.push(m5);
-	meshes.push(m6);
+	let obj = new cylinderCreator(72);
+	obj.moveTo(0, 1);
+	obj.extTo(0, 2, 1, 0.5, 0);
+	let geometry = obj.toGeometry();
+	let mesh = new Mesh(geometry, material);
+	meshes.push(mesh);
+	// 	mesh.translate(0, dy || 0, 0);
+	// 	return mesh;
+	// };
+	// let v0 = 0.75;
+	// let v1 = 0.02;
+	// let v2 = 0.3;
+	// let v3 = 5.0;
+	// let v4 = 0.04;
+	// let v5 = 1.5;
+	// let c0 = 0.3;
+	// let c1 = 0.8;
+	// let r1 = 1.00;
+	// let r2 = r1 - v1;
+	// let r3 = r2 - v2;
+	// let r4 = r3 - v1;
+	// let r5 = 0.15;
+	// let r6 = r5 - v1;
+	// let r7 = r6 - v4;
+	// let r8 = r7 - v1;
+	// let m1 = f(r1, r2, v0, c0, v5);
+	// let m2 = f(r2, r3, v0, c1, v5);
+	// let m3 = f(r3, r4, v0, c0, v5);
+	// let m4 = f(r5, r6, v3, c0);
+	// let m5 = f(r6, r7, v3, c1);
+	// let m6 = f(r7, r8, v3, c0);
+	// meshes.push(m1);
+	// meshes.push(m2);
+	// meshes.push(m3);
+	// meshes.push(m4);
+	// meshes.push(m5);
+	// meshes.push(m6);
 }
 
 window.addEventListener("load", function(){
