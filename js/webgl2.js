@@ -166,6 +166,22 @@ class Transformable {
 		this.transform = this.transform.paste(col, 0, 3);
 		return this;
 	}
+	scale(x, y, z) {
+		if (x instanceof Mat) {
+			[x, y, z] = x.array;
+		}
+		const m = this.transform.array;
+		m[ 0] *= x;
+		m[ 1] *= x;
+		m[ 2] *= x;
+		m[ 4] *= y;
+		m[ 5] *= y;
+		m[ 6] *= y;
+		m[ 8] *= z;
+		m[ 9] *= z;
+		m[10] *= z;
+		return this;
+	}
 	reset() {
 		this.transform = mat4(
 			1, 0, 0, 0,
@@ -182,6 +198,12 @@ class Geometry {
 		this.attrArray = null;
 		this.element = null;
 	}
+	clone() {
+		let clone = new Geometry();
+		clone.attrArray = this.attrArray.slice();
+		clone.element = this.element.slice();
+		return clone;
+	}
 }
 class Mesh extends Transformable {
 	constructor(geometry, material) {
@@ -189,6 +211,12 @@ class Mesh extends Transformable {
 		this.id = Symbol();
 		this.geometry = geometry;
 		this.material = material;
+	}
+	clone() {
+		let geometry = this.geometry.clone();
+		let clone = new Mesh(geometry, this.material);
+		clone.transform = mat4(this.transform);
+		return clone;
 	}
 }
 class Camera extends Transformable {
@@ -425,7 +453,7 @@ class WebGL2Context {
 		const gl = this.gl = canvas.getContext("webgl2");
 		gl.enable(GL_DEPTH_TEST);
 		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
-		gl.clearColor(0.2, 0.2, 0.2, 1);
+		gl.clearColor(0.9, 0.9, 0.9, 1);
 		gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
 		return this;
 	}

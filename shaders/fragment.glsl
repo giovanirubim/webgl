@@ -17,10 +17,10 @@ struct Light {
 void main() {
 
 	// Light ambient_light = Light(vec3(0.0), vec3(1.0), 0.2);
-	// Light array[2];
+	// Light array[1];
 
-	// array[0] = Light(vec3(5.0, 5.0, -5.0), vec3(1.0, 1.0, 1.0), 1.0);
-	// array[1] = Light(vec3(-8.0, -2.0, -8.0), vec3(0.0, 0.3, 1.0), 0.2);
+	// array[0] = Light(vec3(+5.0, +5.0, -5.0), vec3(1.0, 1.0, 1.0), 1.0);
+	// // array[1] = Light(vec3(-8.0, -2.0, -8.0), vec3(0.0, 0.3, 1.0), 0.2);
 	
 	// vec3 total_light = ambient_light.color*ambient_light.strength;
 	// vec3 view_dir = normalize(eye_coord - frag_coord);
@@ -34,9 +34,9 @@ void main() {
 	// 	total_light += (difuse + specular)*light.strength;
 	// }
 
-	// FragColor = vec4(total_light, 1.0)*texture(texture_1, frag_uv);
-
-	FragColor = texture(texture_1, frag_uv);
+	// // FragColor = vec4(total_light, 1.0)*texture(texture_1, frag_uv);
+	// FragColor = vec4(total_light, 1.0)*vec4(frag_color, 1.0);
+	FragColor = vec4(frag_color, 1.0);
 
 }
 
