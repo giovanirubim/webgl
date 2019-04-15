@@ -242,6 +242,8 @@ class cylinderCreator {
 			let d = c + n;
 			this.element.push(a, b, c, b, c, d);
 		}
+		this.last_y = y1;
+		this.lastRad = r1;
 	}
 	toGeometry() {
 		let geometry = new Geometry();
@@ -259,45 +261,73 @@ class cylinderCreator {
 	}
 };
 
-const meshes = [];
-function createMeshes(material) {
+let vMesh = [];
+let camera, material, ratio;
+let rot = 5, dist = 100, open = 3;
+
+function resetCamera() {
+	camera = new Camera(open*TORAD, ratio, 0.5, dist*2);
+	camera.translate(0, 0, -dist);
+	camera.rotate(0, rot*TORAD, 0);
+	camera.translate(-2, 0, 0);
+	camera.rotate(0, 0, TORAD*-10);
+	camera.updateWorld();
+}
+
+function addCylinder(color) {
+	color = colorToArray(color);
+	let color2 = color.slice();
+	color2[0] = 1 - color2[0];
+	color2[1] = 1 - color2[1];
+	color2[2] = 1 - color2[2];
 	let obj = new cylinderCreator(72);
-	obj.moveTo(0, 1);
-	obj.extTo(0, 2, 1, 0.5, 0);
-	let geometry = obj.toGeometry();
-	let mesh = new Mesh(geometry, material);
-	meshes.push(mesh);
-	// 	mesh.translate(0, dy || 0, 0);
-	// 	return mesh;
-	// };
-	// let v0 = 0.75;
-	// let v1 = 0.02;
-	// let v2 = 0.3;
-	// let v3 = 5.0;
-	// let v4 = 0.04;
-	// let v5 = 1.5;
-	// let c0 = 0.3;
-	// let c1 = 0.8;
-	// let r1 = 1.00;
-	// let r2 = r1 - v1;
-	// let r3 = r2 - v2;
-	// let r4 = r3 - v1;
-	// let r5 = 0.15;
-	// let r6 = r5 - v1;
-	// let r7 = r6 - v4;
-	// let r8 = r7 - v1;
-	// let m1 = f(r1, r2, v0, c0, v5);
-	// let m2 = f(r2, r3, v0, c1, v5);
-	// let m3 = f(r3, r4, v0, c0, v5);
-	// let m4 = f(r5, r6, v3, c0);
-	// let m5 = f(r6, r7, v3, c1);
-	// let m6 = f(r7, r8, v3, c0);
-	// meshes.push(m1);
-	// meshes.push(m2);
-	// meshes.push(m3);
-	// meshes.push(m4);
-	// meshes.push(m5);
-	// meshes.push(m6);
+	obj.moveTo(1, 1);
+	obj.extTo( 1, 0.95, ...color);
+	obj.extTo(-1, 0.95, ...color2);
+	obj.extTo(-1,    1, ...color);
+	obj.extTo( 1,    1, ...color2);
+	vMesh.push(new Mesh(obj.toGeometry(), material));
+}
+
+function line(x0, y0, z0, x1, y1, z1, r, g, b) {
+	let attrArray = [];
+	let element = [];
+	let add = (x, y, z) => {
+		attrArray.push(x, y, z, r, g, b, 0, 0, 0, 0, 0);
+		element.push(element.length);
+	}
+	add(x0, y0, z0);
+	add(x1, y1, z1);
+	let geometry = new Geometry();
+	geometry.attrArray = new Float32Array(attrArray);
+	geometry.element = new Uint8Array(element);
+	vMesh.push(new Mesh(geometry, material));
+}
+
+function addCircle() {
+	let nFrags = 72;
+	let geometry = new Geometry();
+	let attrArray = [];
+	let element = [];
+	for (let i=0; i<nFrags; ++i) {
+		let ang = Math.PI*2/nFrags*i;
+		let x = 0;
+		let y = Math.cos(ang);
+		let z = Math.sin(ang);
+		attrArray.push(x, y, z, 1, 1, 1, 0, 0, 0, 0, 0);
+		element.push(i);
+	}
+	element.push(0);
+	geometry.attrArray = new Float32Array(attrArray);
+	if (element.length <= (1 << 8)) {
+		element = new Uint8Array(element);
+	} else if (element.length <= (1 << 16)) {
+		element = new Uint16Array(element);
+	} else {
+		element = new Uint32Array(element);
+	}
+	geometry.element = element;
+	vMesh.push(new Mesh(geometry, material));
 }
 
 window.addEventListener("load", function(){
@@ -315,36 +345,173 @@ window.addEventListener("load", function(){
 		fShader.src = src;
 		fShader.type = "fragment";
 	});
-	const ratio = canvas.width/canvas.height;
-	let camera = new Camera(45*TORAD, ratio, 1, 100);
-	window.camera = camera;
-	camera.translate(0, 0, -4);
-	camera.rotate(-20*TORAD, 22.5*TORAD, 0);
-	camera.reset();
-	camera.translate(1.438419222831726, 1.368080496788025, -3.4726510047912598);
-	camera.lookAt(0, 0, 0);
-	camera.updateWorld();
+	ratio = canvas.width/canvas.height;
 	sync = _ => {
 		ctx.clear();
 		let program = new Program(vShader, fShader);
-		let material = new Material(program);
-		createMeshes(material);
+		material = new Material(program);
+		resetCamera();
 		const rand = x => x*(Math.random()*2 - 1);
-		const m = mat4(camera.transform);
-		const start = new Date();
+		readValues();
+		createLines();
 		setInterval(_=>{
-			var t = new Date()/1000;
 			ctx.clear();
-			camera.transform = mat4(
-				1, 0, 0, 0,
-				0, 1, 0, 0,
-				0, 0, 1, 5,
-				0, 0, 0, 1
-			);
-			camera.lookAt(0, 0, 0);
-			camera.rotate((Math.sin(t) + 1)*0.2 + 0.5, 0, 0);
-			camera.updateWorld();
-			meshes.forEach(mesh => ctx.renderMesh(mesh, camera));
+			vMesh.forEach(mesh => ctx.renderMesh(mesh, camera));
 		}, 10);
 	};
+	let startClick;
+	canvas.addEventListener("mousedown", function(e){
+		startClick = {
+			x: e.offsetX,
+			y: e.offsetY,
+			rot, open, dist
+		};
+	});
+	canvas.addEventListener("mousemove", function(e){
+		if (e.buttons&1) {
+			let x = e.offsetX;
+			let y = e.offsetY;
+			let dy = startClick.y - y;
+			let dx = startClick.x - x;
+			if (e.shiftKey) {
+				let aux = Math.log(startClick.dist);
+				dist = Math.exp(aux + dy*0.01);
+			} else{
+				rot = startClick.rot + dx*0.1;
+			}
+			resetCamera();
+		}
+	});
+});
+
+let mode = "s";
+let axis = "x";
+function getValues() {
+	let res = [];
+	vMesh.forEach(mesh => {
+		x = mesh.transform[0][3];
+		s = Math.max(mesh.transform.array[5]);
+		res.push([x, s]);
+	});
+	return JSON.stringify(res);
+}
+function readValues() {
+	values.forEach(value => {
+		addCircle();
+		let mesh = vMesh[vMesh.length - 1];
+		let [x, s] = value;
+		mesh.scale(1, s, s);
+		mesh.translate(x, 0, 0);
+	});
+}
+
+function createLines() {
+	let x0 = 0;
+	let y0 = 0;
+	let z0 = 0;
+	let add = (x, y, z, color) => {
+		line(x0, y0, z0, x, y, z, ...colorToArray(color));
+		mov(x, y, z);
+	};
+	let mov = (x, y, z) => {
+		x0 = x;
+		y0 = y;
+		z0 = z;
+	};
+	mov(-5.29, 0.97, 0);
+	add(-4.2, 0.97, 0, "#03f");
+	add(-4.2, 0.32, 0, "#03f");
+	add(0.5, 0.23, 0.23, "#03f");
+	add(0.5, 0.38, 0.38, "#03f");
+	add(1.42, 0.38, 0.38, "#03f");
+	add(1.42, -0.38, -0.38, "#03f");
+	add(0.5, -0.38, -0.38, "#aa0");
+	add(0.5, -0.23, -0.23, "#aa0");
+	add(-4.2, -0.32, 0, "#aa0");
+	add(-4.2, -0.97, 0, "#aa0");
+	add(-5.29, -0.97, 0, "#aa0");
+	mov(-5.29, 0, 0.97);
+	add(-4.2, 0, 0.97, "#f00");
+	add(-4.2, 0, 0.32, "#f00");
+	add(0.5, -0.23, 0.23, "#f00");
+	add(0.5, -0.38, 0.38, "#f00");
+	add(1.42, -0.38, 0.38, "#f00");
+	add(1.42, 0.38, -0.38, "#f00");
+	add(0.5, 0.38, -0.38, "#700");
+	add(0.5, 0.23, -0.23, "#700");
+	add(-4.2, 0.0, -0.32, "#700");
+	add(-4.2, 0.0, -0.97, "#700");
+	add(-5.29, 0.0, -0.97, "#700");
+}
+
+let values = [
+	[-5.2999978, 0.9699730],
+	[-4.6999984, 0.9699730],
+	[-4.1999989, 0.9699730],
+	[-4.1999989, 0.3248819],
+	[-5.2999978, 0.3248819],
+	[-5.3499990, 0.3248819],
+	[-5.9499984, 0.3248819],
+	[-6.0099974, 0.3248819],
+	[-5.9099975, 0.2863746],
+	[-5.3999977, 0.2863746],
+	[-3.5999904, 0.3194671],
+	[-1.8999918, 0.3194671],
+	[+0.0000085, 0.3194671],
+	[+0.5000085, 0.3194671],
+	[+0.5000085, 0.5491461],
+	[+0.9000086, 0.5488167],
+	[+1.0000000, 0.5488167],
+	[+1.4200085, 0.5488167]
+];
+
+window.addEventListener("keyup", function(e){
+	let key = e.key.toLowerCase().replace("arrow", "");
+	if (key === "s" || key === "t") {
+		mode = key;
+	} else if (key === "x" || key === "y" || key === "z") {
+		axis = key;
+	} else if (key === "\n" || key === "enter") {
+		let x, y, z, s;
+		if (vMesh.length) {
+			let mesh = vMesh[vMesh.length - 1];
+			x = mesh.transform[0][3];
+			s = Math.max(mesh.transform.array[5]);
+			addCircle();
+			mesh = vMesh[vMesh.length - 1];
+			mesh.scale(1, s, s);
+			mesh.translate(x, 0, 0);
+		} else {
+			addCircle();
+		}
+	}
+});
+
+window.addEventListener("wheel", function(e){
+	let val, inv;
+	if (e.altKey) {
+		val = (e.deltaY + 10000)/10000;
+		inv = (e.deltaY - 10000)/10000;
+	} else {
+		val = (e.deltaY + 1000)/1000;
+		inv = (e.deltaY - 1000)/1000;
+	}
+	if (e.shiftKey) {
+		open *= val;
+		if (open > 45) {
+			open = 45;
+		}
+		resetCamera();
+	} else {
+		let mesh = vMesh[vMesh.length - 1];
+		if (mode === "s") {
+			mesh.scale(1, inv, inv);
+		} else if (mode === "t") {
+			if (e.altKey) {
+				mesh.translate(e.deltaY*0.0001, 0, 0);
+			} else {
+				mesh.translate(e.deltaY*0.001, 0, 0);
+			}
+		}
+	}
 });

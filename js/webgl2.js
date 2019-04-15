@@ -451,9 +451,9 @@ class WebGL2Context {
 		this.size_x = canvas.width;
 		this.size_y = canvas.height;
 		const gl = this.gl = canvas.getContext("webgl2");
-		gl.enable(GL_DEPTH_TEST);
+		// gl.enable(GL_DEPTH_TEST);
 		gl.viewport(this.start_x, this.start_y, this.size_x, this.size_y);
-		gl.clearColor(0.9, 0.9, 0.9, 1);
+		gl.clearColor(0.8, 0.8, 0.8, 1);
 		gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
 		return this;
 	}
@@ -474,9 +474,9 @@ class WebGL2Context {
 		gl.bindVertexArray(vao);
 		const element = geometry.element;
 		if (element instanceof Uint8Array) {
-			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_BYTE, 0);
+			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_BYTE, 0);
 		} else if (element instanceof Uint16Array) {
-			gl.drawElements(GL_TRIANGLES, element.length, GL_UNSIGNED_SHORT, 0);
+			gl.drawElements(GL_LINE_STRIP, element.length, GL_UNSIGNED_SHORT, 0);
 		}
 		return this;
 	}
